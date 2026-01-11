@@ -24,12 +24,13 @@ ROLE_ORDER_FOR_SHEET = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
 PLAYER_NAME_MAP = {
     "PAIN Extra 01": "PAIN tinowns",
     "PAIN tinowns": "PAIN tinowns",
-    "Robo": "Robo",
+    "PAIN Robo": "Robo", 
+    "PAIN Robo": "PAIN Robo",
     "PAIN CarioK": "PAIN CarioK",
     "PAIN TitaN": "PAIN TitaN",
     "PAIN Kuri": "PAIN Kuri"
 }
-PLAYER_DISPLAY_ORDER = ["Robo", "PAIN CarioK", "PAIN tinowns", "PAIN TitaN", "PAIN Kuri"]
+PLAYER_DISPLAY_ORDER = ["PAIN Robo", "PAIN CarioK", "PAIN tinowns", "PAIN TitaN", "PAIN Kuri"]
 
 # --- Логирование ---
 def log_message(message):
