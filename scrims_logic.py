@@ -336,7 +336,15 @@ def fetch_and_store_scrims():
                     row_dict[f"{player_col_prefix}_A"] = p.get('assists',0)
                     row_dict[f"{player_col_prefix}_Dmg"] = p.get('totalDamageDealtToChampions',0)
                     row_dict[f"{player_col_prefix}_CS"] = p.get('totalMinionsKilled',0)+p.get('neutralMinionsKilled',0)
-
+                    items_list = []
+                    for i in range(7):  # Проходим по всем 7 слотам (6 обычных + 1 вард)
+                        item_id = p.get(f"item{i}", 0)
+                        if item_id != 0:  # Если слот не пустой (ID не 0)
+                            items_list.append(str(item_id))
+                    
+                    # Склеиваем их в одну строку через запятую, например: "3006,3031,3072"
+                    # Это поле пойдет в колонку, которую мы добавили в database.py (например, Blue_TOP_Items)
+                    row_dict[f"{player_col_prefix}_Items"] = ",".join(items_list)
                 data_tuple = tuple(row_dict.get(sql_col, "N/A") for sql_col in sql_column_names)
                 try:
                     cursor.execute(insert_sql, data_tuple)
@@ -514,7 +522,7 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
     """
     log_message(f"Aggregating scrim data. Time: {time_filter}, Side: {side_filter}")
     conn = get_db_connection()
-    if not conn: return {}, [], {}, {} # Добавлены пустые словари/списки
+    if not conn: return {}, [], {}, {}
 
     where_clause = ""
     params = []
@@ -542,7 +550,7 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
         log_message(f"Fetched {len(all_scrim_data)} rows from DB based on time filter.")
     except Exception as e:
         log_message(f"Error fetching data for aggregation: {e}")
-        if conn: conn.close(); return {}, [], {}, {} # Добавлены пустые словари/списки
+        if conn: conn.close(); return {}, [], {}, {}
     finally:
         if conn: conn.close()
 
@@ -554,17 +562,21 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
     overall_stats = { "total_games": 0, "blue_wins": 0, "blue_losses": 0, "red_wins": 0, "red_losses": 0 }
     history_list = []
     player_stats_agg = defaultdict(lambda: defaultdict(lambda: {'games': 0, 'wins': 0, 'k': 0, 'd': 0, 'a': 0, 'dmg': 0, 'cs': 0}))
+    
     role_to_abbr = {"TOP": "TOP", "JUNGLE": "JGL", "MIDDLE": "MID", "BOTTOM": "BOT", "UTILITY": "SUP"}
     valid_side_filters = ["blue", "red"]
     filter_side_norm = side_filter.lower() if side_filter.lower() in valid_side_filters else 'all'
+
+    # Список ролей в правильном порядке для отображения деталей матча
+    roles_ordered = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
 
     for row in all_scrim_data:
         try:
             game = dict(row)
             overall_stats["total_games"] += 1
             result = game.get("Result", "Unknown")
-            is_our_blue = game.get("Blue_Team_Name") == TEAM_NAME
-            is_our_red = game.get("Red_Team_Name") == TEAM_NAME
+            is_our_blue = game.get("Blue_Team_Name") == "paiN Gaming" # Используем хардкод или глобальную переменную TEAM_NAME
+            is_our_red = game.get("Red_Team_Name") == "paiN Gaming"
 
             if is_our_blue:
                 if result == "Win": overall_stats["blue_wins"] += 1
@@ -573,25 +585,33 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
                 if result == "Win": overall_stats["red_wins"] += 1
                 elif result == "Loss": overall_stats["red_losses"] += 1
 
-            our_side_prefix = None; game_side_matches_filter = False
-            if is_our_blue: our_side_prefix = "Blue"; game_side_matches_filter = (filter_side_norm == 'all' or filter_side_norm == 'blue')
-            elif is_our_red: our_side_prefix = "Red"; game_side_matches_filter = (filter_side_norm == 'all' or filter_side_norm == 'red')
+            # --- Агрегация статистики игроков (для таблицы чемпионов) ---
+            our_side_prefix = None
+            game_side_matches_filter = False
+            
+            # Определяем нашу сторону для фильтрации статистики
+            if is_our_blue: 
+                our_side_prefix = "Blue"
+                game_side_matches_filter = (filter_side_norm == 'all' or filter_side_norm == 'blue')
+            elif is_our_red: 
+                our_side_prefix = "Red"
+                game_side_matches_filter = (filter_side_norm == 'all' or filter_side_norm == 'red')
 
             if our_side_prefix and game_side_matches_filter:
                 is_win = (result == "Win")
-                for role in ROLE_ORDER_FOR_SHEET:
-                    role_abbr = role_to_abbr.get(role); player_col_prefix = f"{our_side_prefix}_{role_abbr}"
+                for role in roles_ordered:
+                    role_abbr = role_to_abbr.get(role)
+                    player_col_prefix = f"{our_side_prefix}_{role_abbr}"
                     if not role_abbr: continue
                     
-                    # Получаем имя из БД
                     raw_player_name = game.get(f"{player_col_prefix}_Player")
-                    # Пытаемся заменить технический аккаунт на имя игрока, если его нет в мапе - оставляем как есть
-                    player_name = PLAYER_NAME_MAP.get(raw_player_name, raw_player_name)
+                    # Используем глобальный PLAYER_NAME_MAP, если он определен, иначе сырое имя
+                    player_name = PLAYER_NAME_MAP.get(raw_player_name, raw_player_name) if 'PLAYER_NAME_MAP' in globals() else raw_player_name
                     
                     champion_name = game.get(f"{player_col_prefix}_Champ")
                     
-                    # Теперь проверяем уже финальное имя по PLAYER_DISPLAY_ORDER
-                    if player_name in PLAYER_DISPLAY_ORDER and champion_name and champion_name != "N/A":
+                    # Проверяем, есть ли игрок в списке отображаемых (если список задан)
+                    if 'PLAYER_DISPLAY_ORDER' in globals() and player_name in PLAYER_DISPLAY_ORDER and champion_name and champion_name != "N/A":
                          try: k = int(game.get(f"{player_col_prefix}_K", 0) or 0)
                          except (ValueError, TypeError): k = 0
                          try: d = int(game.get(f"{player_col_prefix}_D", 0) or 0)
@@ -607,21 +627,87 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
                          stats['games'] += 1; stats['wins'] += is_win; stats['k'] += k; stats['d'] += d;
                          stats['a'] += a; stats['dmg'] += dmg; stats['cs'] += cs
 
-            hist_entry = {"Date": game.get("Date", "N/A"),"Patch": game.get("Patch", "N/A"), "Blue_Team_Name": game.get("Blue_Team_Name", "N/A"), "Red_Team_Name": game.get("Red_Team_Name", "N/A"), "Result": result, "Duration": game.get("Duration", "N/A"), "Game_ID": game.get("Game_ID", "N/A")}
+            # --- Формирование истории игр ---
+            hist_entry = {
+                "Date": game.get("Date", "N/A"),
+                "Patch": game.get("Patch", "N/A"), 
+                "Blue_Team_Name": game.get("Blue_Team_Name", "N/A"), 
+                "Red_Team_Name": game.get("Red_Team_Name", "N/A"), 
+                "Result": result, 
+                "Duration": game.get("Duration", "N/A"), 
+                "Game_ID": game.get("Game_ID", "N/A")
+            }
+
+            # Иконки банов и пиков (как раньше)
             bb_icons = [get_champion_icon_html(game.get(f"Blue_Ban_{i}_ID"), champion_data) for i in range(1, 6)]
             rb_icons = [get_champion_icon_html(game.get(f"Red_Ban_{i}_ID"), champion_data) for i in range(1, 6)]
             hist_entry["B_Bans_HTML"] = " ".join(filter(None, bb_icons))
             hist_entry["R_Bans_HTML"] = " ".join(filter(None, rb_icons))
-            bp_icons = [get_champion_icon_html(game.get(f"Blue_{role_to_abbr[role]}_Champ"), champion_data) for role in ROLE_ORDER_FOR_SHEET if role in role_to_abbr]
-            rp_icons = [get_champion_icon_html(game.get(f"Red_{role_to_abbr[role]}_Champ"), champion_data) for role in ROLE_ORDER_FOR_SHEET if role in role_to_abbr]
+            
+            bp_icons = [get_champion_icon_html(game.get(f"Blue_{role_to_abbr[role]}_Champ"), champion_data) for role in roles_ordered if role in role_to_abbr]
+            rp_icons = [get_champion_icon_html(game.get(f"Red_{role_to_abbr[role]}_Champ"), champion_data) for role in roles_ordered if role in role_to_abbr]
             hist_entry["B_Picks_HTML"] = " ".join(filter(None, bp_icons))
             hist_entry["R_Picks_HTML"] = " ".join(filter(None, rp_icons))
+
+            # --- НОВОЕ: Сбор детальной информации о матче для раскрывающегося списка ---
+            details = {
+                'blue_players': [],
+                'red_players': [],
+                'blue_total_kills': 0,
+                'red_total_kills': 0
+            }
+
+            for role in roles_ordered:
+                role_abbr = role_to_abbr.get(role)
+                if not role_abbr: continue
+
+                # scrims_logic.py
+
+                for side in ['Blue', 'Red']:
+                    prefix = f"{side}_{role_abbr}"
+                    
+                    # Получаем имя чемпиона
+                    champ_name = game.get(f"{prefix}_Champ", "N/A")
+                    
+                    # Генерируем иконку (ВАЖНО: champion_data должен быть доступен в этой функции)
+                    player_icon = get_champion_icon_html(champ_name, champion_data, width=32, height=32)
+                    
+                    k = int(game.get(f"{prefix}_K", 0) or 0)
+                    raw_items = game.get(f"{prefix}_Items", "")
+
+                    p_entry = {
+                        'role': role,
+                        'name': game.get(f"{prefix}_Player", "Unknown"),
+                        'champion': champ_name,
+                        'icon_html': player_icon,  # <--- ПРОВЕРЬТЕ ЭТУ СТРОКУ
+                        'k': k,
+                        'd': int(game.get(f"{prefix}_D", 0) or 0),
+                        'a': int(game.get(f"{prefix}_A", 0) or 0),
+                        'dmg': int(game.get(f"{prefix}_Dmg", 0) or 0),
+                        'cs': int(game.get(f"{prefix}_CS", 0) or 0),
+                        'items_list': raw_items if raw_items else ""
+                    }
+
+                    if side == 'Blue':
+                        details['blue_players'].append(p_entry)
+                        details['blue_total_kills'] += k
+                    else:
+                        # Теперь и у красных будет icon_html и items_list
+                        details['red_players'].append(p_entry)
+                        details['red_total_kills'] += k
+
+            hist_entry['details'] = details
             history_list.append(hist_entry)
+
         except Exception as row_err:
             log_message(f"Error processing row: {dict(row) if row else 'N/A'}. Error: {row_err}"); continue
 
+    # --- Подготовка финальной статистики игроков ---
     final_player_stats = defaultdict(dict)
-    for player in PLAYER_DISPLAY_ORDER:
+    # Используем PLAYER_DISPLAY_ORDER если он есть, иначе берем всех найденных
+    players_to_display = PLAYER_DISPLAY_ORDER if 'PLAYER_DISPLAY_ORDER' in globals() else list(player_stats_agg.keys())
+    
+    for player in players_to_display:
         if player in player_stats_agg:
             champ_dict = player_stats_agg[player]
             sorted_champs = sorted(champ_dict.items(), key=lambda item: item[1]['games'], reverse=True)
@@ -636,7 +722,7 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
                     final_player_stats[player][champ] = stats
 
     log_message("Aggregation complete.")
-    return overall_stats, history_list, dict(final_player_stats), champion_data # Возвращаем dict
+    return overall_stats, history_list, dict(final_player_stats), champion_data
 
 # --- Блок для тестирования ---
 if __name__ == '__main__':
