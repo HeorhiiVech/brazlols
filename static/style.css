@@ -36,7 +36,12 @@ body {
     display: flex;
     min-height: 100vh;
 }
-
+.runes-container {
+    display: none; /* По умолчанию всегда скрыто */
+}
+.items-container {
+    display: flex; /* По умолчанию всегда видно */
+}
 .sidebar {
     width: var(--sidebar-width);
     background-color: var(--bg-dark-secondary);

@@ -206,7 +206,7 @@
 
     <hr>
 
-    <h2>Game History ({{ selected_time_filter }})</h2>
+   <h2>Game History ({{ selected_time_filter }})</h2>
     {% if history %}
         <div class="table-responsive">
         <table class="scrims-table">
@@ -252,7 +252,13 @@
                                 
                                 <div class="team-details blue-side" style="flex: 1; background: #1a2333; padding: 15px; border-radius: 8px; border-left: 5px solid #4a90e2; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
                                     <div class="team-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #333;">
-                                        <span style="color: #4a90e2; font-weight: bold; font-size: 1.2em;">{{ game.Blue_Team_Name }}</span>
+                                        <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                                            <span style="color: #4a90e2; font-weight: bold; font-size: 1.2em;">{{ game.Blue_Team_Name }}</span>
+                                            <div class="toggle-btns" style="margin-top: 5px; display: flex; gap: 5px;">
+                                                <button onclick="toggleAssets(this, 'items')" style="background: #4a90e2; border: none; color: white; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">ITEMS</button>
+                                                <button onclick="toggleAssets(this, 'runes')" style="background: #333; border: 1px solid #4a90e2; color: #4a90e2; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">RUNES</button>
+                                            </div>
+                                        </div>
                                         <span style="background: #4a90e2; color: white; padding: 2px 10px; border-radius: 4px; font-size: 1.3em; font-weight: 800;">{{ game.details.blue_total_kills }}</span>
                                     </div>
                                     
@@ -263,16 +269,21 @@
                                             <span style="font-size: 0.95em; color: #fff; font-weight: 500;">{{ p.name }}</span>
                                         </div>
 
-                                        <div style="display: flex; gap: 3px; flex-grow: 1; justify-content: center;">
-                                            {% if p.items_list %}
-                                                {% set items = p.items_list.split(',') if p.items_list is string else p.items_list %}
-                                                {% for item_id in items %}
-                                                    {% if item_id|string != "0" and item_id|string != "" %}
-                                                        <img src="https://ddragon.leagueoflegends.com/cdn/16.1.1/img/item/{{ item_id }}.png" 
-                                                            width="22" height="22" style="border-radius: 3px; border: 1px solid #444;">
-                                                    {% endif %}
-                                                {% endfor %}
-                                            {% endif %}
+                                        <div class="player-assets-wrapper" style="display: flex; gap: 3px; flex-grow: 1; justify-content: center;">
+                                            <div class="items-container" style="display: flex; gap: 3px;">
+                                                {% if p.items_list %}
+                                                    {% set items = p.items_list.split(',') if p.items_list is string else p.items_list %}
+                                                    {% for item_id in items %}
+                                                        {% if item_id|string != "0" and item_id|string != "" %}
+                                                            <img src="https://ddragon.leagueoflegends.com/cdn/16.1.1/img/item/{{ item_id }}.png" 
+                                                                width="22" height="22" style="border-radius: 3px; border: 1px solid #444;">
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% endif %}
+                                            </div>
+                                            <div class="runes-container" style="display: none;">
+                                                {{ p.rune_html | safe }}
+                                            </div>
                                         </div>
 
                                         <div style="width: 100px; text-align: right; font-family: 'Courier New', monospace; font-size: 1.15em; font-weight: 800; letter-spacing: 1px;">
@@ -285,7 +296,13 @@
                                 <div class="team-details red-side" style="flex: 1; background: #331a1a; padding: 15px; border-radius: 8px; border-right: 5px solid #e24a4a; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
                                     <div class="team-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #333;">
                                         <span style="background: #e24a4a; color: white; padding: 2px 10px; border-radius: 4px; font-size: 1.3em; font-weight: 800;">{{ game.details.red_total_kills }}</span>
-                                        <span style="color: #e24a4a; font-weight: bold; font-size: 1.2em;">{{ game.Red_Team_Name }}</span>
+                                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                                            <span style="color: #e24a4a; font-weight: bold; font-size: 1.2em;">{{ game.Red_Team_Name }}</span>
+                                            <div class="toggle-btns" style="margin-top: 5px; display: flex; gap: 5px;">
+                                                <button onclick="toggleAssets(this, 'items')" style="background: #e24a4a; border: none; color: white; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">ITEMS</button>
+                                                <button onclick="toggleAssets(this, 'runes')" style="background: #333; border: 1px solid #e24a4a; color: #e24a4a; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">RUNES</button>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {% for p in game.details.red_players %}
@@ -295,16 +312,21 @@
                                             <span style="font-size: 0.95em; color: #fff; font-weight: 500;">{{ p.name }}</span>
                                         </div>
 
-                                        <div style="display: flex; gap: 3px; flex-grow: 1; justify-content: center;">
-                                            {% if p.items_list %}
-                                                {% set items = p.items_list.split(',') if p.items_list is string else p.items_list %}
-                                                {% for item_id in items %}
-                                                    {% if item_id|string != "0" and item_id|string != "" %}
-                                                        <img src="https://ddragon.leagueoflegends.com/cdn/16.1.1/img/item/{{ item_id }}.png" 
-                                                            width="22" height="22" style="border-radius: 3px; border: 1px solid #444;">
-                                                    {% endif %}
-                                                {% endfor %}
-                                            {% endif %}
+                                        <div class="player-assets-wrapper" style="display: flex; gap: 3px; flex-grow: 1; justify-content: center;">
+                                            <div class="items-container" style="display: flex; gap: 3px;">
+                                                {% if p.items_list %}
+                                                    {% set items = p.items_list.split(',') if p.items_list is string else p.items_list %}
+                                                    {% for item_id in items %}
+                                                        {% if item_id|string != "0" and item_id|string != "" %}
+                                                            <img src="https://ddragon.leagueoflegends.com/cdn/16.1.1/img/item/{{ item_id }}.png" 
+                                                                width="22" height="22" style="border-radius: 3px; border: 1px solid #444;">
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% endif %}
+                                            </div>
+                                            <div class="runes-container" style="display: none;">
+                                                {{ p.rune_html | safe }}
+                                            </div>
                                         </div>
 
                                         <div style="width: 100px; text-align: right; font-family: 'Courier New', monospace; font-size: 1.15em; font-weight: 800; letter-spacing: 1px;">
@@ -330,7 +352,6 @@
     {% else %}
         <p class="notice">No game history available for this period.</p>
     {% endif %}
-
     {# --- НОВЫЙ Блок JavaScript для сортировки и переключения деталей --- #}
     <script>
         // Функция для переключения видимости деталей
@@ -345,7 +366,46 @@
                 btn.textContent = 'Show';
             }
         }
+        // НОВАЯ функция для переключения Итемов/Рун
+        function toggleAssets(btn, type) {
+            const teamDetails = btn.closest('.team-details');
+            const items = teamDetails.querySelectorAll('.items-container');
+            const runes = teamDetails.querySelectorAll('.runes-container');
+            const allBtns = btn.parentElement.querySelectorAll('button');
+            
+            // Цвет активной кнопки
+            const isBlue = teamDetails.classList.contains('blue-side');
+            const activeColor = isBlue ? '#4a90e2' : '#e24a4a';
 
+            // 1. Сброс всех кнопок в блоке
+            allBtns.forEach(b => {
+                b.style.background = '#333';
+                b.style.color = activeColor;
+                b.style.border = `1px solid ${activeColor}`;
+            });
+
+            // 2. Подсветка нажатой кнопки
+            btn.style.background = activeColor;
+            btn.style.color = 'white';
+            btn.style.border = '1px solid transparent'; // Избегаем прыжков размера
+
+            // 3. Переключение видимости (строгое)
+            if (type === 'items') {
+                items.forEach(el => {
+                    el.style.setProperty('display', 'flex', 'important');
+                });
+                runes.forEach(el => {
+                    el.style.setProperty('display', 'none', 'important');
+                });
+            } else if (type === 'runes') {
+                items.forEach(el => {
+                    el.style.setProperty('display', 'none', 'important');
+                });
+                runes.forEach(el => {
+                    el.style.setProperty('display', 'flex', 'important');
+                });
+            }
+        }
         document.addEventListener('DOMContentLoaded', () => {
             const sortableTables = document.querySelectorAll('.sortable-table');
 

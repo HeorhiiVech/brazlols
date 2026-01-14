@@ -15,25 +15,25 @@ SCRIMS_HEADER = [
     "Blue Ban 1 ID", "Blue Ban 2 ID", "Blue Ban 3 ID", "Blue Ban 4 ID", "Blue Ban 5 ID",
     "Red Ban 1 ID", "Red Ban 2 ID", "Red Ban 3 ID", "Red Ban 4 ID", "Red Ban 5 ID",
     "Blue_TOP_Player", "Blue_TOP_Champ", "Blue_TOP_K", "Blue_TOP_D", "Blue_TOP_A", "Blue_TOP_Dmg", "Blue_TOP_CS",
-    "Blue_TOP_Items", # Добавлено: строка с ID предметов через запятую
+    "Blue_TOP_Items", "Blue_TOP_Runes", # Добавлено Runes
     "Blue_JGL_Player", "Blue_JGL_Champ", "Blue_JGL_K", "Blue_JGL_D", "Blue_JGL_A", "Blue_JGL_Dmg", "Blue_JGL_CS",
-    "Blue_JGL_Items", # Добавлено
+    "Blue_JGL_Items", "Blue_JGL_Runes", # Добавлено Runes
     "Blue_MID_Player", "Blue_MID_Champ", "Blue_MID_K", "Blue_MID_D", "Blue_MID_A", "Blue_MID_Dmg", "Blue_MID_CS",
-    "Blue_MID_Items", # Добавлено
+    "Blue_MID_Items", "Blue_MID_Runes", # Добавлено Runes
     "Blue_BOT_Player", "Blue_BOT_Champ", "Blue_BOT_K", "Blue_BOT_D", "Blue_BOT_A", "Blue_BOT_Dmg", "Blue_BOT_CS",
-    "Blue_BOT_Items", # Добавлено
+    "Blue_BOT_Items", "Blue_BOT_Runes", # Добавлено Runes
     "Blue_SUP_Player", "Blue_SUP_Champ", "Blue_SUP_K", "Blue_SUP_D", "Blue_SUP_A", "Blue_SUP_Dmg", "Blue_SUP_CS",
-    "Blue_SUP_Items", # Добавлено
+    "Blue_SUP_Items", "Blue_SUP_Runes", # Добавлено Runes
     "Red_TOP_Player", "Red_TOP_Champ", "Red_TOP_K", "Red_TOP_D", "Red_TOP_A", "Red_TOP_Dmg", "Red_TOP_CS",
-    "Red_TOP_Items", # Добавлено
+    "Red_TOP_Items", "Red_TOP_Runes", # Добавлено Runes
     "Red_JGL_Player", "Red_JGL_Champ", "Red_JGL_K", "Red_JGL_D", "Red_JGL_A", "Red_JGL_Dmg", "Red_JGL_CS",
-    "Red_JGL_Items", # Добавлено
+    "Red_JGL_Items", "Red_JGL_Runes", # Добавлено Runes
     "Red_MID_Player", "Red_MID_Champ", "Red_MID_K", "Red_MID_D", "Red_MID_A", "Red_MID_Dmg", "Red_MID_CS",
-    "Red_MID_Items", # Добавлено
+    "Red_MID_Items", "Red_MID_Runes", # Добавлено Runes
     "Red_BOT_Player", "Red_BOT_Champ", "Red_BOT_K", "Red_BOT_D", "Red_BOT_A", "Red_BOT_Dmg", "Red_BOT_CS",
-    "Red_BOT_Items", # Добавлено
+    "Red_BOT_Items", "Red_BOT_Runes", # Добавлено Runes
     "Red_SUP_Player", "Red_SUP_Champ", "Red_SUP_K", "Red_SUP_D", "Red_SUP_A", "Red_SUP_Dmg", "Red_SUP_CS",
-    "Red_SUP_Items", # Добавлено
+    "Red_SUP_Items", "Red_SUP_Runes", # Добавлено Runes
     "Game ID"
 ]
 

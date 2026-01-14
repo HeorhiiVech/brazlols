@@ -345,6 +345,38 @@ def fetch_and_store_scrims():
                     # Склеиваем их в одну строку через запятую, например: "3006,3031,3072"
                     # Это поле пойдет в колонку, которую мы добавили в database.py (например, Blue_TOP_Items)
                     row_dict[f"{player_col_prefix}_Items"] = ",".join(items_list)
+                    perks_data = p.get("perks", {})
+                    all_runes_list = []
+                    
+                    try:
+                        # 1. Основные и второстепенные ветки рун
+                        styles = perks_data.get("styles", [])
+                        for style in styles:
+                            selections = style.get("selections", [])
+                            for selection in selections:
+                                perk_id = selection.get("perk", 0)
+                                if perk_id != 0:
+                                    all_runes_list.append(str(perk_id))
+                        
+                        # 2. Маленькие статы (Stat Perks: Атака, Гибкость, Защита)
+                        stat_perks = perks_data.get("statPerks", {})
+                        # Проверяем все три возможных ключа статов
+                        for stat_key in ['offense', 'flex', 'defense']:
+                            s_id = stat_perks.get(stat_key, 0)
+                            if s_id != 0:
+                                all_runes_list.append(str(s_id))
+
+                    except (IndexError, AttributeError):
+                        pass
+
+                    # Склеиваем всё в строку через запятую: "8112,8139,8120,8105,8234,8233,5008,5008,5001"
+                    if all_runes_list:
+                        runes_string = ",".join(all_runes_list)
+                    else:
+                        runes_string = "0"
+                    
+                    # Сохраняем готовую строку в словарь для базы
+                    row_dict[f"{player_col_prefix}_Runes"] = runes_string
                 data_tuple = tuple(row_dict.get(sql_col, "N/A") for sql_col in sql_column_names)
                 try:
                     cursor.execute(insert_sql, data_tuple)
@@ -513,8 +545,47 @@ def get_champion_icon_html(champion_name_or_id, champion_data, width=25, height=
         display_name_fallback = champ_name if champ_name else func_input
         # log_message(f"[Icon] Failed to find valid ddragon name for '{display_name_fallback}'. Returning '?'.")
         return f'<span title="Icon error: {display_name_fallback}">?</span>'
+    
+def get_rune_icon_html(rune_id_input, width=22, height=22):
+    """
+    Универсальная функция для иконок рун через OP.GG.
+    Разбирает строку с ID через запятую и возвращает HTML список иконок.
+    """
+    if not rune_id_input:
+        return ""
 
-# --- Основная функция агрегации данных (Без изменений от HLL) ---
+    # Если в строке несколько ID через запятую ("8437,8112")
+    if isinstance(rune_id_input, str) and ',' in rune_id_input:
+        ids = [r.strip() for r in rune_id_input.split(',') if r.strip()]
+    elif isinstance(rune_id_input, (list, tuple)):
+        ids = [str(r) for r in rune_id_input]
+    else:
+        # Если пришел один ID
+        ids = [str(rune_id_input)]
+
+    html_elements = []
+    
+    for r_id in ids:
+        if not r_id or str(r_id) in ["0", "N/A", "None", "-1"]:
+            continue
+            
+        try:
+            # Чистим ID от лишних .0
+            clean_id = str(int(float(r_id)))
+            
+            # Ссылка на OP.GG
+            icon_url = f"https://opgg-static.akamaized.net/images/lol/perk/{clean_id}.png"
+            
+            html_elements.append(
+                f'<img src="{icon_url}" width="{width}" height="{height}" '
+                f'title="Rune ID: {clean_id}" '
+                f'style="border-radius:50%; vertical-align:middle; margin: 1px; background:rgba(0,0,0,0.3);" '
+                f'onerror="this.style.display=\'none\';">'
+            )
+        except (ValueError, TypeError):
+            continue
+
+    return "".join(html_elements)
 def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
     """
     Загружает данные из SQLite, фильтрует по времени и стороне (для статы игроков),
@@ -674,6 +745,7 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
                     
                     k = int(game.get(f"{prefix}_K", 0) or 0)
                     raw_items = game.get(f"{prefix}_Items", "")
+                    raw_runes = game.get(f"{prefix}_Runes", "0")
 
                     p_entry = {
                         'role': role,
@@ -685,7 +757,9 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
                         'a': int(game.get(f"{prefix}_A", 0) or 0),
                         'dmg': int(game.get(f"{prefix}_Dmg", 0) or 0),
                         'cs': int(game.get(f"{prefix}_CS", 0) or 0),
-                        'items_list': raw_items if raw_items else ""
+                        'items_list': raw_items if raw_items else "",
+                        'rune_id': raw_runes,
+                        'rune_html': get_rune_icon_html(raw_runes, width=24, height=24)
                     }
 
                     if side == 'Blue':
