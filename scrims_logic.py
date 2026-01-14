@@ -28,9 +28,11 @@ PLAYER_NAME_MAP = {
     "PAIN Robo": "PAIN Robo",
     "PAIN CarioK": "PAIN CarioK",
     "PAIN TitaN": "PAIN TitaN",
+    "PAIN Extra 09": "PAIN Marvin",
+    "PAIN Marvin":"PAIN Marvin",
     "PAIN Kuri": "PAIN Kuri"
 }
-PLAYER_DISPLAY_ORDER = ["PAIN Robo", "PAIN CarioK", "PAIN tinowns", "PAIN TitaN", "PAIN Kuri"]
+PLAYER_DISPLAY_ORDER = ["PAIN Robo", "PAIN CarioK", "PAIN tinowns", "PAIN Marvin", "PAIN Kuri"]
 
 # --- Логирование ---
 def log_message(message):
@@ -377,6 +379,7 @@ def fetch_and_store_scrims():
                     
                     # Сохраняем готовую строку в словарь для базы
                     row_dict[f"{player_col_prefix}_Runes"] = runes_string
+                    row_dict[f"{player_col_prefix}_Gold"] = p.get('goldEarned', 0)
                 data_tuple = tuple(row_dict.get(sql_col, "N/A") for sql_col in sql_column_names)
                 try:
                     cursor.execute(insert_sql, data_tuple)
@@ -727,12 +730,24 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
                 'blue_total_kills': 0,
                 'red_total_kills': 0
             }
+            #--- РАСЧЕТ МАКСИМУМОВ ДЛЯ ПОЛОСОК STATS ---
+            match_max_dmg = 1
+            match_max_gold = 1
+            
+            # Сначала проходим по всем, чтобы найти самые большие числа в этом матче
+            for role_name in ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]:
+                role_abbr_temp = role_to_abbr.get(role_name)
+                if not role_abbr_temp: continue
+                for side_temp in ['Blue', 'Red']:
+                    px = f"{side_temp}_{role_abbr_temp}"
+                    d_val = int(game.get(f"{px}_Dmg", 0) or 0)
+                    g_val = int(game.get(f"{px}_Gold", 0) or 0)
+                    if d_val > match_max_dmg: match_max_dmg = d_val
+                    if g_val > match_max_gold: match_max_gold = g_val
 
             for role in roles_ordered:
                 role_abbr = role_to_abbr.get(role)
                 if not role_abbr: continue
-
-                # scrims_logic.py
 
                 for side in ['Blue', 'Red']:
                     prefix = f"{side}_{role_abbr}"
@@ -746,6 +761,7 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
                     k = int(game.get(f"{prefix}_K", 0) or 0)
                     raw_items = game.get(f"{prefix}_Items", "")
                     raw_runes = game.get(f"{prefix}_Runes", "0")
+                    current_gold = int(game.get(f"{prefix}_Gold", 0) or 0)
 
                     p_entry = {
                         'role': role,
@@ -757,6 +773,9 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
                         'a': int(game.get(f"{prefix}_A", 0) or 0),
                         'dmg': int(game.get(f"{prefix}_Dmg", 0) or 0),
                         'cs': int(game.get(f"{prefix}_CS", 0) or 0),
+                        'gold': current_gold,
+                        'max_dmg': match_max_dmg,         # <--- НОВОЕ (макс по матчу)
+                        'max_gold': match_max_gold,
                         'items_list': raw_items if raw_items else "",
                         'rune_id': raw_runes,
                         'rune_html': get_rune_icon_html(raw_runes, width=24, height=24)

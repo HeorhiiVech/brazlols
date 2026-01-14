@@ -257,6 +257,7 @@
                                             <div class="toggle-btns" style="margin-top: 5px; display: flex; gap: 5px;">
                                                 <button onclick="toggleAssets(this, 'items')" style="background: #4a90e2; border: none; color: white; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">ITEMS</button>
                                                 <button onclick="toggleAssets(this, 'runes')" style="background: #333; border: 1px solid #4a90e2; color: #4a90e2; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">RUNES</button>
+                                                <button onclick="toggleAssets(this, 'stats')" style="background: #333; border: 1px solid #4a90e2; color: #4a90e2; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">STATS</button>
                                             </div>
                                         </div>
                                         <span style="background: #4a90e2; color: white; padding: 2px 10px; border-radius: 4px; font-size: 1.3em; font-weight: 800;">{{ game.details.blue_total_kills }}</span>
@@ -269,7 +270,7 @@
                                             <span style="font-size: 0.95em; color: #fff; font-weight: 500;">{{ p.name }}</span>
                                         </div>
 
-                                        <div class="player-assets-wrapper" style="display: flex; gap: 3px; flex-grow: 1; justify-content: center;">
+                                        <div class="player-assets-wrapper" style="display: flex; gap: 3px; flex-grow: 1; justify-content: center; align-items: center;">
                                             <div class="items-container" style="display: flex; gap: 3px;">
                                                 {% if p.items_list %}
                                                     {% set items = p.items_list.split(',') if p.items_list is string else p.items_list %}
@@ -281,8 +282,29 @@
                                                     {% endfor %}
                                                 {% endif %}
                                             </div>
+                                            
                                             <div class="runes-container" style="display: none;">
                                                 {{ p.rune_html | safe }}
+                                            </div>
+
+                                            <div class="stats-container" style="display: none; flex-direction: column; gap: 4px; width: 100%; max-width: 160px; padding-left: 5px;">
+                                                
+                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                    <span style="font-size: 0.6em; color: #888; font-weight: bold; width: 30px; flex-shrink: 0;">DMG</span>
+                                                    <div style="flex-grow: 1; height: 8px; background: #111; border-radius: 4px; overflow: hidden; border: 1px solid #444; position: relative;">
+                                                        <div style="width: {{ (p.dmg / p.max_dmg * 100)|round }}%; height: 100%; background: linear-gradient(90deg, #4a90e2, #7eb6ff);"></div>
+                                                    </div>
+                                                    <span style="font-size: 0.7em; color: #fff; min-width: 35px; text-align: right;">{{ (p.dmg/1000)|round(1) }}k</span>
+                                                </div>
+
+                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                    <span style="font-size: 0.6em; color: #888; font-weight: bold; width: 30px; flex-shrink: 0;">GOLD</span>
+                                                    <div style="flex-grow: 1; height: 8px; background: #111; border-radius: 4px; overflow: hidden; border: 1px solid #444; position: relative;">
+                                                        <div style="width: {{ (p.gold / p.max_gold * 100)|round }}%; height: 100%; background: linear-gradient(90deg, #d4af37, #f9d71c);"></div>
+                                                    </div>
+                                                    <span style="font-size: 0.7em; color: #fff; min-width: 35px; text-align: right;">{{ (p.gold/1000)|round(1) }}k</span>
+                                                </div>
+
                                             </div>
                                         </div>
 
@@ -301,6 +323,7 @@
                                             <div class="toggle-btns" style="margin-top: 5px; display: flex; gap: 5px;">
                                                 <button onclick="toggleAssets(this, 'items')" style="background: #e24a4a; border: none; color: white; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">ITEMS</button>
                                                 <button onclick="toggleAssets(this, 'runes')" style="background: #333; border: 1px solid #e24a4a; color: #e24a4a; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">RUNES</button>
+                                                <button onclick="toggleAssets(this, 'stats')" style="background: #333; border: 1px solid #e24a4a; color: #e24a4a; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">STATS</button>
                                             </div>
                                         </div>
                                     </div>
@@ -312,7 +335,7 @@
                                             <span style="font-size: 0.95em; color: #fff; font-weight: 500;">{{ p.name }}</span>
                                         </div>
 
-                                        <div class="player-assets-wrapper" style="display: flex; gap: 3px; flex-grow: 1; justify-content: center;">
+                                        <div class="player-assets-wrapper" style="display: flex; gap: 3px; flex-grow: 1; justify-content: center; align-items: center;">
                                             <div class="items-container" style="display: flex; gap: 3px;">
                                                 {% if p.items_list %}
                                                     {% set items = p.items_list.split(',') if p.items_list is string else p.items_list %}
@@ -324,8 +347,27 @@
                                                     {% endfor %}
                                                 {% endif %}
                                             </div>
+
                                             <div class="runes-container" style="display: none;">
                                                 {{ p.rune_html | safe }}
+                                            </div>
+
+                                            <div class="stats-container" style="display: none; flex-direction: column; gap: 4px; width: 100%; max-width: 160px;">
+                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                    <span style="font-size: 0.6em; color: #888; font-weight: bold; width: 32px; flex-shrink: 0; text-align: left;">DMG</span>
+                                                    <div style="flex-grow: 1; height: 8px; background: #111; border-radius: 4px; overflow: hidden; border: 1px solid #444; position: relative;">
+                                                        <div style="width: {{ (p.dmg / p.max_dmg * 100)|round }}%; height: 100%; background: linear-gradient(90deg, #e24a4a, #ff8080);"></div>
+                                                    </div>
+                                                    <span style="font-size: 0.7em; color: #fff; min-width: 35px; text-align: right;">{{ (p.dmg/1000)|round(1) }}k</span>
+                                                </div>
+
+                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                    <span style="font-size: 0.6em; color: #888; font-weight: bold; width: 32px; flex-shrink: 0; text-align: left;">GOLD</span>
+                                                    <div style="flex-grow: 1; height: 8px; background: #111; border-radius: 4px; overflow: hidden; border: 1px solid #444; position: relative;">
+                                                        <div style="width: {{ (p.gold / p.max_gold * 100)|round }}%; height: 100%; background: linear-gradient(90deg, #d4af37, #f9d71c);"></div>
+                                                    </div>
+                                                    <span style="font-size: 0.7em; color: #fff; min-width: 35px; text-align: right;">{{ (p.gold/1000)|round(1) }}k</span>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -371,6 +413,7 @@
             const teamDetails = btn.closest('.team-details');
             const items = teamDetails.querySelectorAll('.items-container');
             const runes = teamDetails.querySelectorAll('.runes-container');
+            const stats = teamDetails.querySelectorAll('.stats-container'); 
             const allBtns = btn.parentElement.querySelectorAll('button');
             
             // Цвет активной кнопки
@@ -387,23 +430,21 @@
             // 2. Подсветка нажатой кнопки
             btn.style.background = activeColor;
             btn.style.color = 'white';
-            btn.style.border = '1px solid transparent'; // Избегаем прыжков размера
+            btn.style.border = '1px solid transparent'; 
 
-            // 3. Переключение видимости (строгое)
+            // 3. Переключение видимости (Скрываем всё, включаем только нужное)
             if (type === 'items') {
-                items.forEach(el => {
-                    el.style.setProperty('display', 'flex', 'important');
-                });
-                runes.forEach(el => {
-                    el.style.setProperty('display', 'none', 'important');
-                });
+                items.forEach(el => el.style.setProperty('display', 'flex', 'important'));
+                runes.forEach(el => el.style.setProperty('display', 'none', 'important'));
+                stats.forEach(el => el.style.setProperty('display', 'none', 'important'));
             } else if (type === 'runes') {
-                items.forEach(el => {
-                    el.style.setProperty('display', 'none', 'important');
-                });
-                runes.forEach(el => {
-                    el.style.setProperty('display', 'flex', 'important');
-                });
+                items.forEach(el => el.style.setProperty('display', 'none', 'important'));
+                runes.forEach(el => el.style.setProperty('display', 'flex', 'important'));
+                stats.forEach(el => el.style.setProperty('display', 'none', 'important'));
+            } else if (type === 'stats') {
+                items.forEach(el => el.style.setProperty('display', 'none', 'important'));
+                runes.forEach(el => el.style.setProperty('display', 'none', 'important'));
+                stats.forEach(el => el.style.setProperty('display', 'flex', 'important'));
             }
         }
         document.addEventListener('DOMContentLoaded', () => {
