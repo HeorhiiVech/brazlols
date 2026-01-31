@@ -222,17 +222,16 @@ def extract_team_tag(riot_id_game_name):
 
 # --- Функция обновления и сохранения данных скримов в SQLite (Без изменений от HLL) ---
 def fetch_and_store_scrims():
-    """
-    Получает последние скримы с GRID API, парсит их
-    и сохраняет в базу данных SQLite.
-    Возвращает количество добавленных игр.
-    """
     log_message("Starting scrims update process...")
     series_list = get_all_series(days_ago=5)
-    if not series_list: log_message("No recent series found."); return 0
+    if not series_list: 
+        log_message("No recent series found.")
+        return 0
 
     conn = get_db_connection()
-    if not conn: log_message("DB Connection failed for scrim update."); return -1 # Возвращаем -1 при ошибке БД
+    if not conn: 
+        log_message("DB Connection failed for scrim update.")
+        return -1 
     cursor = conn.cursor()
 
     try:
@@ -243,7 +242,9 @@ def fetch_and_store_scrims():
         log_message(f"Error reading existing game IDs: {e}. Proceeding without duplicate check.")
         existing_game_ids = set()
 
-    added_count = 0; processed_series_count = 0; total_series = len(series_list)
+    added_count = 0
+    processed_series_count = 0
+    total_series = len(series_list)
 
     sql_column_names = [hdr.replace(" ", "_").replace(".", "").replace("-", "_") for hdr in SCRIMS_HEADER]
     quoted_column_names = [f'"{col}"' for col in sql_column_names]
@@ -260,143 +261,173 @@ def fetch_and_store_scrims():
         if not series_id: continue
 
         games_in_series = get_series_state(series_id)
-        if not games_in_series: time.sleep(API_REQUEST_DELAY / 2); continue
+        if not games_in_series: 
+            time.sleep(API_REQUEST_DELAY / 2)
+            continue
 
         for game_info in games_in_series:
-            game_id = game_info.get("id"); sequence_number = game_info.get("sequenceNumber")
+            game_id = game_info.get("id")
+            sequence_number = game_info.get("sequenceNumber")
             if not game_id or sequence_number is None: continue
             if game_id in existing_game_ids: continue
 
             summary_data = download_riot_summary_data(series_id, sequence_number)
-            if not summary_data: time.sleep(API_REQUEST_DELAY); continue
+            if not summary_data: 
+                time.sleep(API_REQUEST_DELAY)
+                continue
 
             try:
-                participants = summary_data.get("participants", []); teams_data = summary_data.get("teams", [])
-                if not participants or len(participants) != 10 or not teams_data or len(teams_data) != 2: continue
+                participants = summary_data.get("participants", [])
+                teams_data = summary_data.get("teams", [])
+                if not participants or len(participants) != 10 or not teams_data or len(teams_data) != 2: 
+                    continue
 
-                our_side = None; our_team_id = None
+                our_side = None
+                our_team_id = None
                 for idx, p in enumerate(participants):
                     normalized_name = normalize_player_name(p.get("riotIdGameName"))
-                    if normalized_name in ROSTER_RIOT_NAME_TO_GRID_ID: # Используем HLL ростер
-                        current_side='blue' if idx<5 else 'red'; current_team_id=100 if idx<5 else 200
-                        if our_side is None: our_side=current_side; our_team_id=current_team_id
-                        elif our_side!=current_side: log_message(f"Warn: Players on both sides! G:{game_id}"); break
+                    if normalized_name in ROSTER_RIOT_NAME_TO_GRID_ID:
+                        current_side = 'blue' if idx < 5 else 'red'
+                        current_team_id = 100 if idx < 5 else 200
+                        if our_side is None: 
+                            our_side = current_side
+                            our_team_id = current_team_id
+                        elif our_side != current_side: 
+                            log_message(f"Warn: Players on both sides! G:{game_id}")
+                            break
                 if our_side is None: continue
 
-                opponent_team_name = "Opponent"; opponent_tags = defaultdict(int)
-                opponent_indices = range(5, 10) if our_side=='blue' else range(0, 5)
+                opponent_team_name = "Opponent"
+                opponent_tags = defaultdict(int)
+                opponent_indices = range(5, 10) if our_side == 'blue' else range(0, 5)
                 for idx in opponent_indices:
-                    if idx<len(participants): tag=extract_team_tag(participants[idx].get("riotIdGameName")); tag and opponent_tags.update({tag: opponent_tags[tag] + 1})
-                if opponent_tags: sorted_tags=sorted(opponent_tags.items(), key=lambda item: item[1], reverse=True); opponent_team_name=sorted_tags[0][0] if sorted_tags[0][1]>=3 else "Opponent"
-                blue_team_name = TEAM_NAME if our_side == 'blue' else opponent_team_name; red_team_name = TEAM_NAME if our_side == 'red' else opponent_team_name
+                    if idx < len(participants): 
+                        tag = extract_team_tag(participants[idx].get("riotIdGameName"))
+                        if tag: opponent_tags[tag] += 1
+                
+                if opponent_tags: 
+                    sorted_tags = sorted(opponent_tags.items(), key=lambda item: item[1], reverse=True)
+                    opponent_team_name = sorted_tags[0][0] if sorted_tags[0][1] >= 3 else "Opponent"
+                
+                blue_team_name = TEAM_NAME if our_side == 'blue' else opponent_team_name
+                red_team_name = TEAM_NAME if our_side == 'red' else opponent_team_name
 
                 result = "Unknown"
                 for team_summary in teams_data:
-                    if team_summary.get("teamId") == our_team_id: win_status = team_summary.get("win"); result = "Win" if win_status is True else "Loss" if win_status is False else "Unknown"; break
+                    if team_summary.get("teamId") == our_team_id: 
+                        win_status = team_summary.get("win")
+                        result = "Win" if win_status is True else "Loss" if win_status is False else "Unknown"
+                        break
 
-                blue_bans = ["N/A"]*5; red_bans = ["N/A"]*5
+                blue_bans = ["N/A"] * 5
+                red_bans = ["N/A"] * 5
                 for team in teams_data:
-                    target_bans = blue_bans if team.get("teamId")==100 else red_bans; bans_list = sorted(team.get("bans",[]), key=lambda x: x.get('pickTurn',99))
-                    for i, ban in enumerate(bans_list[:5]): target_bans[i] = str(c_id) if (c_id := ban.get("championId", -1)) != -1 else "N/A"
+                    target_bans = blue_bans if team.get("teamId") == 100 else red_bans
+                    bans_list = sorted(team.get("bans", []), key=lambda x: x.get('pickTurn', 99))
+                    for i, ban in enumerate(bans_list[:5]): 
+                        target_bans[i] = str(c_id) if (c_id := ban.get("championId", -1)) != -1 else "N/A"
 
                 game_creation_timestamp = summary_data.get("gameCreation")
                 date_str = "N/A"
                 if game_creation_timestamp:
-                    try: dt_obj=datetime.fromtimestamp(game_creation_timestamp/1000, timezone.utc); date_str=dt_obj.strftime("%Y-%m-%d %H:%M:%S");
+                    try: 
+                        dt_obj = datetime.fromtimestamp(game_creation_timestamp/1000, timezone.utc)
+                        date_str = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
                     except Exception: pass
 
                 game_duration_sec = summary_data.get("gameDuration", 0)
                 duration_str = "N/A"
                 if game_duration_sec > 0:
-                    try: minutes, seconds = divmod(int(game_duration_sec), 60); duration_str = f"{minutes}:{seconds:02d}";
-                    except Exception: pass
+                    minutes, seconds = divmod(int(game_duration_sec), 60)
+                    duration_str = f"{minutes}:{seconds:02d}"
 
-                game_version = summary_data.get("gameVersion", "N/A"); patch_str = "N/A"
-                if game_version!="N/A": parts=game_version.split('.'); patch_str=f"{parts[0]}.{parts[1]}" if len(parts)>=2 else game_version
+                game_version = summary_data.get("gameVersion", "N/A")
+                patch_str = "N/A"
+                if game_version != "N/A": 
+                    parts = game_version.split('.')
+                    patch_str = f"{parts[0]}.{parts[1]}" if len(parts) >= 2 else game_version
 
                 row_dict = {sql_col: "N/A" for sql_col in sql_column_names}
-                row_dict["Date"] = date_str; row_dict["Patch"] = patch_str
-                row_dict["Blue_Team_Name"] = blue_team_name; row_dict["Red_Team_Name"] = red_team_name
-                row_dict["Duration"] = duration_str; row_dict["Result"] = result
+                row_dict["Date"] = date_str
+                row_dict["Patch"] = patch_str
+                row_dict["Blue_Team_Name"] = blue_team_name
+                row_dict["Red_Team_Name"] = red_team_name
+                row_dict["Duration"] = duration_str
+                row_dict["Result"] = result
                 row_dict["Game_ID"] = game_id
-                for i in range(5): row_dict[f"Blue_Ban_{i+1}_ID"] = blue_bans[i]; row_dict[f"Red_Ban_{i+1}_ID"] = red_bans[i]
+                for i in range(5): 
+                    row_dict[f"Blue_Ban_{i+1}_ID"] = blue_bans[i]
+                    row_dict[f"Red_Ban_{i+1}_ID"] = red_bans[i]
 
                 role_to_abbr = {"TOP": "TOP", "JUNGLE": "JGL", "MIDDLE": "MID", "BOTTOM": "BOT", "UTILITY": "SUP"}
                 for idx, p in enumerate(participants):
-                    if not all(k in p for k in ['riotIdGameName', 'championName', 'kills', 'deaths', 'assists', 'totalDamageDealtToChampions', 'totalMinionsKilled', 'neutralMinionsKilled']):
-                        log_message(f"Warn G:{game_id}: Incomplete participant data index {idx}"); continue
-
-                    role_name = ROLE_ORDER_FOR_SHEET[idx % 5]; side_prefix = "Blue" if idx < 5 else "Red"
-                    role_abbr = role_to_abbr.get(role_name); player_col_prefix = f"{side_prefix}_{role_abbr}"
+                    role_name = ROLE_ORDER_FOR_SHEET[idx % 5]
+                    side_prefix = "Blue" if idx < 5 else "Red"
+                    role_abbr = role_to_abbr.get(role_name)
+                    player_col_prefix = f"{side_prefix}_{role_abbr}"
                     if not role_abbr: continue
 
-                    player_name = normalize_player_name(p.get("riotIdGameName")) or "Unknown"
-                    row_dict[f"{player_col_prefix}_Player"] = player_name
+                    row_dict[f"{player_col_prefix}_Player"] = normalize_player_name(p.get("riotIdGameName")) or "Unknown"
                     row_dict[f"{player_col_prefix}_Champ"] = p.get("championName", "N/A")
-                    row_dict[f"{player_col_prefix}_K"] = p.get('kills',0)
-                    row_dict[f"{player_col_prefix}_D"] = p.get('deaths',0)
-                    row_dict[f"{player_col_prefix}_A"] = p.get('assists',0)
-                    row_dict[f"{player_col_prefix}_Dmg"] = p.get('totalDamageDealtToChampions',0)
-                    row_dict[f"{player_col_prefix}_CS"] = p.get('totalMinionsKilled',0)+p.get('neutralMinionsKilled',0)
-                    items_list = []
-                    for i in range(7):  # Проходим по всем 7 слотам (6 обычных + 1 вард)
-                        item_id = p.get(f"item{i}", 0)
-                        if item_id != 0:  # Если слот не пустой (ID не 0)
-                            items_list.append(str(item_id))
+                    row_dict[f"{player_col_prefix}_K"] = p.get('kills', 0)
+                    row_dict[f"{player_col_prefix}_D"] = p.get('deaths', 0)
+                    row_dict[f"{player_col_prefix}_A"] = p.get('assists', 0)
+                    row_dict[f"{player_col_prefix}_Dmg"] = p.get('totalDamageDealtToChampions', 0)
+                    row_dict[f"{player_col_prefix}_CS"] = p.get('totalMinionsKilled', 0) + p.get('neutralMinionsKilled', 0)
                     
-                    # Склеиваем их в одну строку через запятую, например: "3006,3031,3072"
-                    # Это поле пойдет в колонку, которую мы добавили в database.py (например, Blue_TOP_Items)
-                    row_dict[f"{player_col_prefix}_Items"] = ",".join(items_list)
-                    perks_data = p.get("perks", {})
-                    all_runes_list = []
-                    
-                    try:
-                        # 1. Основные и второстепенные ветки рун
-                        styles = perks_data.get("styles", [])
-                        for style in styles:
-                            selections = style.get("selections", [])
-                            for selection in selections:
-                                perk_id = selection.get("perk", 0)
-                                if perk_id != 0:
-                                    all_runes_list.append(str(perk_id))
-                        
-                        # 2. Маленькие статы (Stat Perks: Атака, Гибкость, Защита)
-                        stat_perks = perks_data.get("statPerks", {})
-                        # Проверяем все три возможных ключа статов
-                        for stat_key in ['offense', 'flex', 'defense']:
-                            s_id = stat_perks.get(stat_key, 0)
-                            if s_id != 0:
-                                all_runes_list.append(str(s_id))
+                    items = [str(p.get(f"item{i}", 0)) for i in range(7) if p.get(f"item{i}", 0) != 0]
+                    row_dict[f"{player_col_prefix}_Items"] = ",".join(items)
 
-                    except (IndexError, AttributeError):
-                        pass
-
-                    # Склеиваем всё в строку через запятую: "8112,8139,8120,8105,8234,8233,5008,5008,5001"
-                    if all_runes_list:
-                        runes_string = ",".join(all_runes_list)
-                    else:
-                        runes_string = "0"
+                    all_runes = []
+                    perks = p.get("perks", {})
+                    for style in perks.get("styles", []):
+                        for sel in style.get("selections", []):
+                            if (pid := sel.get("perk", 0)) != 0: all_runes.append(str(pid))
                     
-                    # Сохраняем готовую строку в словарь для базы
-                    row_dict[f"{player_col_prefix}_Runes"] = runes_string
+                    sp = perks.get("statPerks", {})
+                    for sk in ['offense', 'flex', 'defense']:
+                        if (sid := sp.get(sk, 0)) != 0: all_runes.append(str(sid))
+                    
+                    row_dict[f"{player_col_prefix}_Runes"] = ",".join(all_runes) if all_runes else "0"
                     row_dict[f"{player_col_prefix}_Gold"] = p.get('goldEarned', 0)
+
                 data_tuple = tuple(row_dict.get(sql_col, "N/A") for sql_col in sql_column_names)
-                try:
-                    cursor.execute(insert_sql, data_tuple)
-                    if cursor.rowcount > 0: added_count += 1; existing_game_ids.add(game_id)
-                except sqlite3.Error as e: log_message(f"DB Insert Error G:{game_id}: {e}")
+                
+                # Сохраняем основную информацию об игре
+                cursor.execute(insert_sql, data_tuple)
+                
+                if cursor.rowcount > 0:
+                    added_count += 1
+                    existing_game_ids.add(game_id)
+                    
+                    # !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: 
+                    # Сначала подтверждаем запись в таблицу scrims и закрываем транзакцию,
+                    # чтобы освободить базу для функции process_replay_to_db.
+                    conn.commit() 
+                    
+                    log_message(f"New game {game_id} added. Fetching timeline...")
+                    timeline_data = download_riot_livestats_data(series_id, sequence_number)
+                    
+                    if timeline_data:
+                        # Теперь process_replay_to_db сможет открыть свое соединение без ошибок
+                        process_replay_to_db(game_id, timeline_data, summary_data)
+                        log_message(f"Replay data stored for {game_id}")
+                    else:
+                        log_message(f"Warning: Timeline data not available for {game_id}")
 
             except Exception as e:
-                log_message(f"Parse/Process fail G:{game_id}: {e}"); import traceback; log_message(traceback.format_exc()); continue
-            finally: time.sleep(API_REQUEST_DELAY / 4)
-        try: conn.commit() # Commit after each series
-        except sqlite3.Error as e: log_message(f"DB Commit Error after S:{series_id}: {e}")
+                log_message(f"Parse/Process fail G:{game_id}: {e}")
+                import traceback
+                log_message(traceback.format_exc())
+                continue
+            finally: 
+                time.sleep(API_REQUEST_DELAY / 4)
+
+        # После каждой серии тоже делаем коммит
+        conn.commit() 
         time.sleep(API_REQUEST_DELAY / 2)
 
-    try: conn.commit() # Final commit
-    except sqlite3.Error as e: log_message(f"DB Final Commit Error: {e}")
-    finally: conn.close()
-
+    conn.close()
     log_message(f"Scrims update finished. Added {added_count} new game(s).")
     return added_count
 
@@ -591,9 +622,10 @@ def get_rune_icon_html(rune_id_input, width=22, height=22):
     return "".join(html_elements)
 def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
     """
-    Загружает данные из SQLite, фильтрует по времени и стороне (для статы игроков),
-    и агрегирует статистику.
+    Исправленная версия: удален конфликтующий импорт get_rune_icon_html.
     """
+    from database import get_db_connection # Убедись, что это импортируется корректно
+    
     log_message(f"Aggregating scrim data. Time: {time_filter}, Side: {side_filter}")
     conn = get_db_connection()
     if not conn: return {}, [], {}, {}
@@ -602,221 +634,146 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
     params = []
     if time_filter != "All Time":
         now_utc = datetime.now(timezone.utc)
-        delta = None
-        if time_filter == "3 Days": delta = timedelta(days=3)
-        elif time_filter == "1 Week": delta = timedelta(weeks=1)
-        elif time_filter == "2 Weeks": delta = timedelta(weeks=2)
-        elif time_filter == "4 Weeks": delta = timedelta(weeks=4)
-        elif time_filter == "2 Months": delta = timedelta(days=60)
+        delta = {"3 Days": 3, "1 Week": 7, "2 Weeks": 14, "4 Weeks": 28, "2 Months": 60}.get(time_filter)
         if delta:
-            cutoff_date = (now_utc - delta).strftime("%Y-%m-%d %H:%M:%S")
+            cutoff_date = (now_utc - timedelta(days=delta)).strftime("%Y-%m-%d %H:%M:%S")
             where_clause = "WHERE \"Date\" >= ?"
             params.append(cutoff_date)
-            log_message(f"Applying time filter: Date >= {cutoff_date}")
-        else: log_message(f"Warning: Unknown time filter '{time_filter}'.")
 
-    all_scrim_data = []
     try:
         cursor = conn.cursor()
-        select_all_sql = f"SELECT * FROM scrims {where_clause} ORDER BY \"Date\" DESC"
-        cursor.execute(select_all_sql, params)
+        cursor.execute(f"SELECT * FROM scrims {where_clause} ORDER BY \"Date\" DESC", params)
         all_scrim_data = cursor.fetchall()
-        log_message(f"Fetched {len(all_scrim_data)} rows from DB based on time filter.")
-    except Exception as e:
-        log_message(f"Error fetching data for aggregation: {e}")
-        if conn: conn.close(); return {}, [], {}, {}
-    finally:
-        if conn: conn.close()
+        
+        # Импортируем только то, что точно есть в app.py
+        from app import get_champion_data, get_champion_icon_html
+        champion_data = get_champion_data()
+        
+        overall_stats = { "total_games": 0, "blue_wins": 0, "blue_losses": 0, "red_wins": 0, "red_losses": 0 }
+        history_list = []
+        player_stats_agg = defaultdict(lambda: defaultdict(lambda: {'games': 0, 'wins': 0, 'k': 0, 'd': 0, 'a': 0, 'dmg': 0, 'cs': 0}))
+        
+        role_to_abbr = {"TOP": "TOP", "JUNGLE": "JGL", "MIDDLE": "MID", "BOTTOM": "BOT", "UTILITY": "SUP"}
+        roles_ordered = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
 
-    if not all_scrim_data:
-        log_message("No data found for the selected time filter."); return {}, [], {}, {}
-
-    champion_data = get_champion_data()
-
-    overall_stats = { "total_games": 0, "blue_wins": 0, "blue_losses": 0, "red_wins": 0, "red_losses": 0 }
-    history_list = []
-    player_stats_agg = defaultdict(lambda: defaultdict(lambda: {'games': 0, 'wins': 0, 'k': 0, 'd': 0, 'a': 0, 'dmg': 0, 'cs': 0}))
-    
-    role_to_abbr = {"TOP": "TOP", "JUNGLE": "JGL", "MIDDLE": "MID", "BOTTOM": "BOT", "UTILITY": "SUP"}
-    valid_side_filters = ["blue", "red"]
-    filter_side_norm = side_filter.lower() if side_filter.lower() in valid_side_filters else 'all'
-
-    # Список ролей в правильном порядке для отображения деталей матча
-    roles_ordered = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
-
-    for row in all_scrim_data:
-        try:
+        for row in all_scrim_data:
             game = dict(row)
-            overall_stats["total_games"] += 1
+            game_id = str(game.get("Game_ID") or game.get("Game ID") or "N/A")
             result = game.get("Result", "Unknown")
-            is_our_blue = game.get("Blue_Team_Name") == "paiN Gaming" # Используем хардкод или глобальную переменную TEAM_NAME
+            
+            is_our_blue = game.get("Blue_Team_Name") == "paiN Gaming"
             is_our_red = game.get("Red_Team_Name") == "paiN Gaming"
-
+            
             if is_our_blue:
                 if result == "Win": overall_stats["blue_wins"] += 1
-                elif result == "Loss": overall_stats["blue_losses"] += 1
-            if is_our_red:
+                else: overall_stats["blue_losses"] += 1
+            elif is_our_red:
                 if result == "Win": overall_stats["red_wins"] += 1
-                elif result == "Loss": overall_stats["red_losses"] += 1
+                else: overall_stats["red_losses"] += 1
+            overall_stats["total_games"] += 1
 
-            # --- Агрегация статистики игроков (для таблицы чемпионов) ---
-            our_side_prefix = None
-            game_side_matches_filter = False
-            
-            # Определяем нашу сторону для фильтрации статистики
-            if is_our_blue: 
-                our_side_prefix = "Blue"
-                game_side_matches_filter = (filter_side_norm == 'all' or filter_side_norm == 'blue')
-            elif is_our_red: 
-                our_side_prefix = "Red"
-                game_side_matches_filter = (filter_side_norm == 'all' or filter_side_norm == 'red')
-
-            if our_side_prefix and game_side_matches_filter:
-                is_win = (result == "Win")
-                for role in roles_ordered:
-                    role_abbr = role_to_abbr.get(role)
-                    player_col_prefix = f"{our_side_prefix}_{role_abbr}"
-                    if not role_abbr: continue
-                    
-                    raw_player_name = game.get(f"{player_col_prefix}_Player")
-                    # Используем глобальный PLAYER_NAME_MAP, если он определен, иначе сырое имя
-                    player_name = PLAYER_NAME_MAP.get(raw_player_name, raw_player_name) if 'PLAYER_NAME_MAP' in globals() else raw_player_name
-                    
-                    champion_name = game.get(f"{player_col_prefix}_Champ")
-                    
-                    # Проверяем, есть ли игрок в списке отображаемых (если список задан)
-                    if 'PLAYER_DISPLAY_ORDER' in globals() and player_name in PLAYER_DISPLAY_ORDER and champion_name and champion_name != "N/A":
-                         try: k = int(game.get(f"{player_col_prefix}_K", 0) or 0)
-                         except (ValueError, TypeError): k = 0
-                         try: d = int(game.get(f"{player_col_prefix}_D", 0) or 0)
-                         except (ValueError, TypeError): d = 0
-                         try: a = int(game.get(f"{player_col_prefix}_A", 0) or 0)
-                         except (ValueError, TypeError): a = 0
-                         try: dmg = int(game.get(f"{player_col_prefix}_Dmg", 0) or 0)
-                         except (ValueError, TypeError): dmg = 0
-                         try: cs = int(game.get(f"{player_col_prefix}_CS", 0) or 0)
-                         except (ValueError, TypeError): cs = 0
-                         
-                         stats = player_stats_agg[player_name][champion_name]
-                         stats['games'] += 1; stats['wins'] += is_win; stats['k'] += k; stats['d'] += d;
-                         stats['a'] += a; stats['dmg'] += dmg; stats['cs'] += cs
-
-            # --- Формирование истории игр ---
-            hist_entry = {
-                "Date": game.get("Date", "N/A"),
-                "Patch": game.get("Patch", "N/A"), 
-                "Blue_Team_Name": game.get("Blue_Team_Name", "N/A"), 
-                "Red_Team_Name": game.get("Red_Team_Name", "N/A"), 
-                "Result": result, 
-                "Duration": game.get("Duration", "N/A"), 
-                "Game_ID": game.get("Game_ID", "N/A")
-            }
-
-            # Иконки банов и пиков (как раньше)
-            bb_icons = [get_champion_icon_html(game.get(f"Blue_Ban_{i}_ID"), champion_data) for i in range(1, 6)]
-            rb_icons = [get_champion_icon_html(game.get(f"Red_Ban_{i}_ID"), champion_data) for i in range(1, 6)]
-            hist_entry["B_Bans_HTML"] = " ".join(filter(None, bb_icons))
-            hist_entry["R_Bans_HTML"] = " ".join(filter(None, rb_icons))
-            
-            bp_icons = [get_champion_icon_html(game.get(f"Blue_{role_to_abbr[role]}_Champ"), champion_data) for role in roles_ordered if role in role_to_abbr]
-            rp_icons = [get_champion_icon_html(game.get(f"Red_{role_to_abbr[role]}_Champ"), champion_data) for role in roles_ordered if role in role_to_abbr]
-            hist_entry["B_Picks_HTML"] = " ".join(filter(None, bp_icons))
-            hist_entry["R_Picks_HTML"] = " ".join(filter(None, rp_icons))
-
-            # --- НОВОЕ: Сбор детальной информации о матче для раскрывающегося списка ---
             details = {
-                'blue_players': [],
-                'red_players': [],
-                'blue_total_kills': 0,
-                'red_total_kills': 0
+                'blue_players': [], 'red_players': [],
+                'blue_total_kills': 0, 'red_total_kills': 0,
+                'blue_events': [], 'red_events': []
             }
-            #--- РАСЧЕТ МАКСИМУМОВ ДЛЯ ПОЛОСОК STATS ---
-            match_max_dmg = 1
-            match_max_gold = 1
+
+            if game_id != "N/A":
+                ev_cursor = conn.cursor()
+                ev_cursor.execute("SELECT * FROM objective_events WHERE game_id = ? ORDER BY timestamp_ms ASC", (game_id,))
+                rows = ev_cursor.fetchall()
+                for e_row in rows:
+                    evt = dict(e_row)
+                    ms = evt.get('timestamp_ms', 0)
+                    time_str = f"{(ms // 1000) // 60}:{(ms // 1000) % 60:02d}"
+                    obj_t = evt.get('objective_type', '')
+                    sub = evt.get('objective_subtype', '')
+                    lane = evt.get('lane', '')
+                    p_name = evt.get('player_name') or evt.get('killer_name') or ""
+                    player_part = f" ({p_name})" if p_name else ""
+                    
+                    if obj_t == 'TOWER': txt = f"Tower: {sub} ({lane}){player_part}"
+                    elif obj_t == 'DRAGON': txt = f"Dragon: {sub}{player_part}"
+                    else: txt = f"{obj_t}: {sub}{player_part}" if sub else f"{obj_t}{player_part}"
+
+                    details['blue_events' if evt.get('team_id') == 100 else 'red_events'].append({
+                        'time': time_str, 'text': txt, 'timestamp': ms, 
+                        'teamId': evt.get('team_id'), 'type': obj_t
+                    })
+                ev_cursor.close()
+
+            bb = [get_champion_icon_html(game.get(f"Blue_Ban_{i}_ID"), champion_data) for i in range(1, 6)]
+            rb = [get_champion_icon_html(game.get(f"Red_Ban_{i}_ID"), champion_data) for i in range(1, 6)]
             
-            # Сначала проходим по всем, чтобы найти самые большие числа в этом матче
-            for role_name in ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]:
-                role_abbr_temp = role_to_abbr.get(role_name)
-                if not role_abbr_temp: continue
-                for side_temp in ['Blue', 'Red']:
-                    px = f"{side_temp}_{role_abbr_temp}"
-                    d_val = int(game.get(f"{px}_Dmg", 0) or 0)
-                    g_val = int(game.get(f"{px}_Gold", 0) or 0)
-                    if d_val > match_max_dmg: match_max_dmg = d_val
-                    if g_val > match_max_gold: match_max_gold = g_val
+            bp, rp = [], []
+            for role in roles_ordered:
+                r_a = role_to_abbr.get(role)
+                bp.append(get_champion_icon_html(game.get(f"Blue_{r_a}_Champ"), champion_data))
+                rp.append(get_champion_icon_html(game.get(f"Red_{r_a}_Champ"), champion_data))
+
+            match_max_dmg = 1
+            for role in roles_ordered:
+                r_a = role_to_abbr[role]
+                match_max_dmg = max(match_max_dmg, int(game.get(f"Blue_{r_a}_Dmg", 0) or 0), int(game.get(f"Red_{r_a}_Dmg", 0) or 0))
 
             for role in roles_ordered:
-                role_abbr = role_to_abbr.get(role)
-                if not role_abbr: continue
-
+                r_a = role_to_abbr[role]
                 for side in ['Blue', 'Red']:
-                    prefix = f"{side}_{role_abbr}"
+                    p_f = f"{side}_{r_a}"
+                    champ = game.get(f"{p_f}_Champ", "N/A")
+                    k, d, a = int(game.get(f"{p_f}_K", 0) or 0), int(game.get(f"{p_f}_D", 0) or 0), int(game.get(f"{p_f}_A", 0) or 0)
+                    dmg, cs = int(game.get(f"{p_f}_Dmg", 0) or 0), int(game.get(f"{p_f}_CS", 0) or 0)
                     
-                    # Получаем имя чемпиона
-                    champ_name = game.get(f"{prefix}_Champ", "N/A")
+                    # Пытаемся получить иконку руны без импорта функции, если она не найдена
+                    rune_id = game.get(f"{p_f}_Runes", "0")
+                    rune_html = f'<img src="https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7200_Domination.png" width="24" height="24">' # Заглушка, если функции нет
                     
-                    # Генерируем иконку (ВАЖНО: champion_data должен быть доступен в этой функции)
-                    player_icon = get_champion_icon_html(champ_name, champion_data, width=32, height=32)
-                    
-                    k = int(game.get(f"{prefix}_K", 0) or 0)
-                    raw_items = game.get(f"{prefix}_Items", "")
-                    raw_runes = game.get(f"{prefix}_Runes", "0")
-                    current_gold = int(game.get(f"{prefix}_Gold", 0) or 0)
-
                     p_entry = {
-                        'role': role,
-                        'name': game.get(f"{prefix}_Player", "Unknown"),
-                        'champion': champ_name,
-                        'icon_html': player_icon,  # <--- ПРОВЕРЬТЕ ЭТУ СТРОКУ
-                        'k': k,
-                        'd': int(game.get(f"{prefix}_D", 0) or 0),
-                        'a': int(game.get(f"{prefix}_A", 0) or 0),
-                        'dmg': int(game.get(f"{prefix}_Dmg", 0) or 0),
-                        'cs': int(game.get(f"{prefix}_CS", 0) or 0),
-                        'gold': current_gold,
-                        'max_dmg': match_max_dmg,         # <--- НОВОЕ (макс по матчу)
-                        'max_gold': match_max_gold,
-                        'items_list': raw_items if raw_items else "",
-                        'rune_id': raw_runes,
-                        'rune_html': get_rune_icon_html(raw_runes, width=24, height=24)
+                        'role': role, 'name': game.get(f"{p_f}_Player", "Unknown"),
+                        'champion': champ, 'icon_html': get_champion_icon_html(champ, champion_data, 32, 32),
+                        'k': k, 'd': d, 'a': a, 'dmg': dmg, 'cs': cs,
+                        'max_dmg': match_max_dmg, 'items_list': game.get(f"{p_f}_Items", ""),
+                        'rune_html': rune_html # Здесь стоит использовать твою рабочую логику из app.py если она там есть
                     }
+                    
+                    details[side.lower() + '_players'].append(p_entry)
+                    details[side.lower() + '_total_kills'] += k
 
-                    if side == 'Blue':
-                        details['blue_players'].append(p_entry)
-                        details['blue_total_kills'] += k
-                    else:
-                        # Теперь и у красных будет icon_html и items_list
-                        details['red_players'].append(p_entry)
-                        details['red_total_kills'] += k
+                    if (side == 'Blue' and is_our_blue) or (side == 'Red' and is_our_red):
+                        st = player_stats_agg[p_entry['name']][champ]
+                        st['games'] += 1; st['wins'] += (result == "Win")
+                        st['k'] += k; st['d'] += d; st['a'] += a; st['dmg'] += dmg; st['cs'] += cs
 
-            hist_entry['details'] = details
-            history_list.append(hist_entry)
+            history_list.append({
+                "Date": game.get("Date", "N/A"), "Patch": game.get("Patch", "N/A"),
+                "Blue_Team_Name": game.get("Blue_Team_Name", "N/A"), "Red_Team_Name": game.get("Red_Team_Name", "N/A"),
+                "Result": result, "Duration": game.get("Duration", "N/A"), "Game_ID": game_id, "details": details,
+                "B_Bans_HTML": " ".join(filter(None, bb)), "R_Bans_HTML": " ".join(filter(None, rb)),
+                "B_Picks_HTML": " ".join(filter(None, bp)), "R_Picks_HTML": " ".join(filter(None, rp))
+            })
 
-        except Exception as row_err:
-            log_message(f"Error processing row: {dict(row) if row else 'N/A'}. Error: {row_err}"); continue
+        final_player_stats = defaultdict(dict)
+        for player, champs in player_stats_agg.items():
+            for champ, s in champs.items():
+                g = s['games']
+                if g > 0:
+                    s.update({
+                        'win_rate': round((s['wins']/g)*100, 1),
+                        'kda': round((s['k']+s['a'])/max(1, s['d']), 1),
+                        'avg_dmg': s['dmg'] // g, 'avg_cs': round(s['cs']/g, 1),
+                        'icon_html': get_champion_icon_html(champ, champion_data, 30, 30)
+                    })
+                    final_player_stats[player][champ] = s
 
-    # --- Подготовка финальной статистики игроков ---
-    final_player_stats = defaultdict(dict)
-    # Используем PLAYER_DISPLAY_ORDER если он есть, иначе берем всех найденных
-    players_to_display = PLAYER_DISPLAY_ORDER if 'PLAYER_DISPLAY_ORDER' in globals() else list(player_stats_agg.keys())
-    
-    for player in players_to_display:
-        if player in player_stats_agg:
-            champ_dict = player_stats_agg[player]
-            sorted_champs = sorted(champ_dict.items(), key=lambda item: item[1]['games'], reverse=True)
-            for champ, stats in sorted_champs:
-                games = stats['games']
-                if games > 0:
-                    stats['win_rate'] = round((stats['wins'] / games) * 100, 1)
-                    stats['kda'] = round((stats['k'] + stats['a']) / max(1, stats['d']), 1)
-                    stats['avg_dmg'] = math.ceil(stats['dmg'] / games)
-                    stats['avg_cs'] = round(stats['cs'] / games, 1)
-                    stats['icon_html'] = get_champion_icon_html(champ, champion_data, width=30, height=30)
-                    final_player_stats[player][champ] = stats
+        return overall_stats, history_list, dict(final_player_stats), champion_data
 
-    log_message("Aggregation complete.")
-    return overall_stats, history_list, dict(final_player_stats), champion_data
-
+    except Exception as e:
+        log_message(f"Aggregation Error: {e}")
+        import traceback
+        log_message(traceback.format_exc()) # Поможет увидеть где именно ошибка
+        return {}, [], {}, {}
+    finally:
+        if conn: conn.close()
 # --- Блок для тестирования ---
 if __name__ == '__main__':
     print("Testing scrims_logic...")
@@ -834,3 +791,248 @@ if __name__ == '__main__':
         if first_player: print(f"Stats for {first_player}: {dict(test_player.get(first_player, {}))}")
         else: print("No players in display order.")
         print("\nTest complete.")
+
+def get_game_replay_data(game_id):
+    """Возвращает данные в формате, который ожидает JS плеер."""
+    import json
+    conn = get_db_connection()
+    if not conn:
+        return {"timeline": [], "events": []}
+    
+    try:
+        cursor = conn.cursor()
+        # 1. Загружаем позиции
+        cursor.execute("""
+            SELECT timestamp_seconds, positions_json 
+            FROM player_positions_snapshots 
+            WHERE game_id = ? 
+            ORDER BY timestamp_seconds ASC
+        """, (str(game_id),))
+        
+        rows = cursor.fetchall()
+        timeline = []
+        for row in rows:
+            # Превращаем секунды в миллисекунды, так как JS плеер работает с ms
+            timeline.append({
+                "timestamp": row[0] * 1000, 
+                "positions": json.loads(row[1])
+            })
+
+        # 2. Загружаем события (пока отдаем пустой список, если таблицы нет)
+        events = []
+        try:
+            cursor.execute("SELECT timestamp_ms, event_type, victim_id FROM game_events WHERE game_id = ?", (str(game_id),))
+            e_rows = cursor.fetchall()
+            for er in e_rows:
+                events.append({
+                    "timestamp_ms": er[0],
+                    "event_type": er[1],
+                    "victim_id": er[2]
+                })
+        except:
+            pass # Если таблицы событий еще нет, просто пропускаем
+
+        return {
+            "timeline": timeline,
+            "events": events
+        }
+    except Exception as e:
+        print(f"Error fetching replay data: {e}")
+        return {"timeline": [], "events": [], "error": str(e)}
+    finally:
+        conn.close()
+
+def log_message(msg):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+    print(f"{timestamp} :: {msg}")
+
+def process_replay_to_db(game_id, timeline_data, summary_data):
+    """
+    Парсит NDJSON, сохраняет позиции И события объектов (башни/монстры).
+    """
+    conn = None
+    for attempt in range(5):
+        try:
+            conn = get_db_connection()
+            conn.execute("PRAGMA busy_timeout = 60000")
+            break
+        except sqlite3.OperationalError:
+            log_message(f"Database busy, retrying connection {attempt+1}/5...")
+            time.sleep(1)
+
+    if not conn:
+        log_message(f"!!! Could not get DB connection for game {game_id} after retries.")
+        return
+
+    cursor = conn.cursor()
+
+    # 1. Маппинг участников для определения команд и чемпионов
+    participants = summary_data.get("participants", [])
+    pid_to_info = {}
+    for p in participants:
+        pid = p.get("participantId")
+        if pid is not None:
+            pid_to_info[pid] = {
+                "puuid": p.get("puuid"),
+                "champion": p.get("championName", "Unknown"),
+                "teamId": p.get("teamId")
+            }
+
+    try:
+        if isinstance(timeline_data, bytes):
+            timeline_data = timeline_data.decode('utf-8')
+        
+        lines = timeline_data.strip().split('\n')
+        log_message(f"--- Processing {len(lines)} lines for scrim {game_id} ---")
+        
+        timeline_records = []
+        snapshot_map = {} 
+        objective_events_list = []
+
+        for line in lines:
+            if not line.strip(): continue
+            try:
+                snapshot = json.loads(line)
+            except: continue
+
+            schema = snapshot.get("rfc461Schema")
+            game_time_ms = snapshot.get("gameTime") or snapshot.get("timestamp")
+            
+            # --- ПАРСИНГ ПОЗИЦИЙ ---
+            if schema == "stats_update" and game_time_ms is not None:
+                current_participants = snapshot.get("participants", [])
+                t_sec = int(game_time_ms / 1000)
+                snapshot_positions = []
+
+                for p_data in current_participants:
+                    p_id = p_data.get("participantID")
+                    pos = p_data.get("position")
+                    if p_id is not None and pos and 'x' in pos and 'z' in pos:
+                        info = pid_to_info.get(p_id, {})
+                        puuid = p_data.get("puuid") or info.get("puuid")
+                        
+                        timeline_records.append((
+                            str(game_id), int(game_time_ms), int(p_id),
+                            str(puuid) if puuid else f"unknown_{p_id}",
+                            int(pos['x']), int(pos['z']),
+                            datetime.now(timezone.utc).isoformat()
+                        ))
+                        snapshot_positions.append({
+                            "participantID": p_id,
+                            "championName": info.get("champion", "Unknown"),
+                            "teamId": info.get("teamId", 0),
+                            "x": float(pos['x']), "z": float(pos['z'])
+                        })
+                
+                if snapshot_positions and t_sec not in snapshot_map:
+                    snapshot_map[t_sec] = snapshot_positions
+
+            # --- ПАРСИНГ СОБЫТИЙ ОБЪЕКТОВ (Драконы, Башни) ---
+            elif schema in ["epic_monster_kill", "building_destroyed"] or snapshot.get("eventType") == "ELITE_MONSTER_KILL":
+                extracted = extract_single_event(snapshot, game_id, pid_to_info)
+                if extracted:
+                    objective_events_list.append(extracted)
+
+        # 2. Запись всех данных в одной транзакции
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        try:
+            # Очистка старых данных
+            cursor.execute("DELETE FROM player_positions_timeline WHERE game_id = ?", (str(game_id),))
+            cursor.execute("DELETE FROM player_positions_snapshots WHERE game_id = ?", (str(game_id),))
+            cursor.execute("DELETE FROM objective_events WHERE game_id = ?", (str(game_id),))
+
+            # Сохранение позиций
+            if timeline_records:
+                cursor.executemany("""
+                    INSERT INTO player_positions_timeline 
+                    (game_id, timestamp_ms, participant_id, player_puuid, pos_x, pos_z, last_updated)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, timeline_records)
+
+            # Сохранение снапшотов
+            snapshot_insert_data = [
+                (str(game_id), ts, json.dumps(pos_list), datetime.now(timezone.utc).isoformat())
+                for ts, pos_list in snapshot_map.items()
+            ]
+            if snapshot_insert_data:
+                cursor.executemany("""
+                    INSERT INTO player_positions_snapshots 
+                    (game_id, timestamp_seconds, positions_json, last_updated)
+                    VALUES (?, ?, ?, ?)
+                """, snapshot_insert_data)
+
+            # Сохранение событий объектов (ИСПРАВЛЕНО ДЛЯ event_type)
+            if objective_events_list:
+                to_insert_obj = []
+                for e in objective_events_list:
+                    obj_t = e['objective_type']
+                    # Определяем event_type для базы
+                    if obj_t == 'TOWER': evt_t = 'BUILDING_KILL'
+                    else: evt_t = 'ELITE_MONSTER_KILL'
+
+                    to_insert_obj.append((
+                        str(e['game_id']), int(e['timestamp_ms']), evt_t, obj_t,
+                        e.get('objective_subtype'), e.get('team_id'),
+                        e.get('killer_participant_id'), e.get('lane')
+                    ))
+                
+                cursor.executemany("""
+                    INSERT INTO objective_events 
+                    (game_id, timestamp_ms, event_type, objective_type, objective_subtype, team_id, killer_participant_id, lane)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, to_insert_obj)
+
+            conn.commit()
+            log_message(f"DONE G:{game_id}: Saved {len(timeline_records)} pos & {len(objective_events_list)} events.")
+        except Exception as e:
+            conn.rollback()
+            raise e
+
+    except Exception as e:
+        log_message(f"!!! ERROR in process_replay_to_db (G:{game_id}): {e}")
+    finally:
+        if conn: conn.close()
+
+def extract_single_event(snapshot, game_id, pid_to_info):
+    """Вспомогательная функция для парсинга одного события из строки NDJSON."""
+    schema = snapshot.get("rfc461Schema")
+    game_time = snapshot.get("gameTime") or snapshot.get("timestamp")
+    
+    # Эпические монстры
+    if schema == "epic_monster_kill" or snapshot.get("eventType") == "ELITE_MONSTER_KILL":
+        monster_type = snapshot.get("monsterType")
+        obj_type, obj_subtype = None, None
+        
+        if monster_type == 'dragon':
+            obj_type = 'DRAGON'
+            obj_subtype = snapshot.get("dragonType", "UNKNOWN").upper()
+        elif monster_type == 'baron': obj_type, obj_subtype = 'BARON', 'BARON'
+        elif monster_type == 'riftHerald': obj_type, obj_subtype = 'HERALD', 'HERALD'
+        elif monster_type == 'VoidGrub': obj_type, obj_subtype = 'VOIDGRUB', 'VOIDGRUB'
+        
+        if obj_type:
+            killer_pid = snapshot.get("killer") or snapshot.get("killerId")
+            team_id = snapshot.get("killerTeamId")
+            if not team_id and killer_pid:
+                team_id = pid_to_info.get(killer_pid, {}).get("teamId")
+            
+            return {
+                "game_id": game_id, "timestamp_ms": game_time, 
+                "objective_type": obj_type, "objective_subtype": obj_subtype, 
+                "team_id": team_id, "killer_participant_id": killer_pid, "lane": None
+            }
+
+    # Башни
+    elif schema == "building_destroyed":
+        if snapshot.get("buildingType") == "turret":
+            owner_team = snapshot.get("teamID")
+            killer_team = 200 if owner_team == 100 else 100
+            return {
+                "game_id": game_id, "timestamp_ms": game_time,
+                "objective_type": "TOWER", 
+                "objective_subtype": snapshot.get("turretTier", "UNKNOWN").upper(),
+                "team_id": killer_team, 
+                "killer_participant_id": snapshot.get("lastHitter"), 
+                "lane": snapshot.get("lane", "UNKNOWN").upper()
+            }
+    return None

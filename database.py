@@ -277,30 +277,35 @@ def init_db():
         except sqlite3.Error as e:
             print(f"Ошибка при создании таблицы/индексов 'player_positions_timeline': {e}")
             
-        # <<< НОВАЯ ТАБЛИЦА ДЛЯ ОБЪЕКТОВ >>>
+# <<< ОБНОВЛЕННАЯ ТАБЛИЦА ДЛЯ МИНИ-ПЛЕЕРА (СОБЫТИЯ И ОБЪЕКТЫ) >>>
         print("Проверка/создание таблицы objective_events...")
         create_objectives_sql = """
         CREATE TABLE IF NOT EXISTS objective_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             game_id TEXT NOT NULL,
             timestamp_ms INTEGER NOT NULL,
-            objective_type TEXT NOT NULL,     -- 'DRAGON', 'BARON', 'HERALD', 'TOWER', 'VOIDGRUB'
-            objective_subtype TEXT,           -- 'FIRE', 'WATER', 'OUTER', 'INNER' etc.
-            team_id INTEGER,                  -- 100 for Blue, 200 for Red
+            event_type TEXT NOT NULL,         -- 'CHAMPION_KILL', 'BUILDING_KILL', 'ELITE_MONSTER_KILL'
+            objective_type TEXT,              -- 'DRAGON', 'BARON', 'TOWER', 'CHAMPION'
+            objective_subtype TEXT,           -- 'FIRE', 'OUTER', 'RIFTHERALD'
+            team_id INTEGER,                  -- 100 Blue, 200 Red
             killer_participant_id INTEGER,
-            lane TEXT                         -- 'TOP_LANE', 'MID_LANE', 'BOT_LANE' for towers
+            victim_id TEXT,                   -- Имя или ID чемпиона-жертвы
+            pos_x INTEGER,                    -- Координата для плеера
+            pos_z INTEGER,                    -- Координата для плеера
+            lane TEXT                         -- 'TOP_LANE' и т.д.
         );
         """
-        # Индексы для ускорения выборок
+        # Индексы для моментальной загрузки таймлайна в Scrims
         create_objectives_game_id_index = "CREATE INDEX IF NOT EXISTS idx_objectives_game_id ON objective_events (game_id);"
-        create_objectives_type_index = "CREATE INDEX IF NOT EXISTS idx_objectives_type ON objective_events (objective_type);"
+        create_objectives_type_index = "CREATE INDEX IF NOT EXISTS idx_objectives_event_type ON objective_events (event_type);"
+        
         try:
             cursor.execute(create_objectives_sql)
             cursor.execute(create_objectives_game_id_index)
             cursor.execute(create_objectives_type_index)
-            print("Таблица 'objective_events' и индексы успешно проверены/созданы.")
+            print("Таблица 'objective_events' обновлена для поддержки мини-плеера.")
         except sqlite3.Error as e:
-            print(f"Ошибка при создании таблицы/индексов 'objective_events': {e}")
+            print(f"Ошибка при создании objective_events: {e}")
 
         conn.commit()
     except sqlite3.Error as e:

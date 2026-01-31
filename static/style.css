@@ -6,7 +6,21 @@
     margin: 0;
     padding: 0;
 }
-
+.champion-map-icon {
+    position: absolute;
+    width: 24px;   /* Размер иконки */
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid white;
+    z-index: 10;
+    
+    /* ВОТ ЭТО ДЕЛАЕТ ДВИЖЕНИЕ ПЛАВНЫМ */
+    transition: left 0.2s linear, top 0.2s linear;
+    
+    /* Чтобы иконка центрировалась по координатам */
+    transform: translate(-50%, -50%);
+    pointer-events: none; /* Чтобы иконки не мешали кликать по карте */
+}
 :root {
     --bg-dark-primary: #1a1d21;
     --bg-dark-secondary: #25282e;

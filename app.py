@@ -20,7 +20,7 @@ if os.path.exists(dotenv_path):
 else:
     log_message(f"WARNING: .env file not found at expected path: {dotenv_path}. API keys might not be loaded.")
 
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from datetime import datetime, date
 from database import get_db_connection, init_db
 import json
@@ -31,7 +31,8 @@ from scrims_logic import (
     get_champion_data, 
     get_latest_patch_version,
     aggregate_scrim_data,
-    fetch_and_store_scrims
+    fetch_and_store_scrims,
+    get_game_replay_data
 )
 from tournament_logic import (
     fetch_and_store_tournament_data,
@@ -82,6 +83,28 @@ def inject_utility_processor():
 @app.route('/')
 def index():
     return redirect(url_for('tournament'))
+# --- Новый маршрут для получения данных плеера (Таймлайн + События) ---
+
+@app.route('/get_match_replay/<game_id>')
+def get_match_replay(game_id):
+    """API эндпоинт для получения данных движения."""
+    try:
+        # Импорт внутри функции, чтобы избежать циклической зависимости
+        from scrims_logic import get_game_replay_data
+        
+        data = get_game_replay_data(game_id)
+        
+        # Если данных нет вообще
+        if not data:
+            return jsonify([]) 
+            
+        return jsonify(data)
+    except Exception as e:
+        # Используем обычный print, если log_message не импортирован в app.py
+        print(f"!!! Error in /get_match_replay/{game_id}: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
 
 # НОВЫЙ ROUTE ДЛЯ SCRIMS
 @app.route('/scrims')

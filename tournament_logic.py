@@ -735,36 +735,48 @@ def extract_objective_events(livestats_content_str, game_id, participants_summar
     return events
 
 def save_objective_events(conn, game_id, events):
-    """Сохраняет события по объектам для одной игры в БД."""
+    """Сохраняет события по объектам в БД, заполняя обязательное поле event_type."""
     if not conn or not events: return False
     
     cursor = None
     try:
         cursor = conn.cursor()
-        # Сначала удаляем старые данные для этой игры
         cursor.execute("DELETE FROM objective_events WHERE game_id = ?", (str(game_id),))
         
-        to_insert = [
-            (
-                str(e['game_id']), int(e['timestamp_ms']), str(e['objective_type']),
-                str(e.get('objective_subtype')), e.get('team_id'),
-                e.get('killer_participant_id'), str(e.get('lane'))
-            ) for e in events
-        ]
+        to_insert = []
+        for e in events:
+            # Определяем event_type на основе типа объекта, чтобы не было ошибки NOT NULL
+            obj_type = e.get('objective_type', 'UNKNOWN')
+            
+            if obj_type in ['DRAGON', 'BARON', 'HERALD', 'ATAKHAN', 'VOIDGRUB']:
+                e_type = 'ELITE_MONSTER_KILL'
+            elif obj_type == 'TOWER':
+                e_type = 'BUILDING_KILL'
+            else:
+                e_type = 'OTHER_EVENT'
+
+            to_insert.append((
+                str(e['game_id']), 
+                int(e['timestamp_ms']), 
+                e_type,                # event_type (обязательное поле!)
+                obj_type,              # objective_type
+                str(e.get('objective_subtype', '')), 
+                e.get('team_id'),
+                e.get('killer_participant_id'), 
+                str(e.get('lane', ''))
+            ))
 
         if to_insert:
             cursor.executemany("""
                 INSERT INTO objective_events
-                (game_id, timestamp_ms, objective_type, objective_subtype, team_id, killer_participant_id, lane)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (game_id, timestamp_ms, event_type, objective_type, objective_subtype, team_id, killer_participant_id, lane)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, to_insert)
-            log_message(f"[DB Objectives Save] G:{game_id}: Saved {cursor.rowcount} objective events.")
+            log_message(f"[DB Objectives Save] G:{game_id}: Saved {cursor.rowcount} events.")
         return True
     except sqlite3.Error as e:
         log_message(f"[DB Objectives Save] G:{game_id}: Database error - {e}")
         return False
-    finally:
-        if cursor: cursor.close()
 
 # --- Helper Functions (Jungle Pathing, Player Positions, etc.) ---
 def get_zone_for_position(x, z):

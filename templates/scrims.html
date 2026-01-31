@@ -246,147 +246,154 @@
                 
                 <tr id="details-{{ game.Game_ID }}" class="details-row" style="display: none;">
                     <td colspan="11">
-                        <div class="match-details-container" style="padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+                        <div class="match-details-container" style="padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #0d1117;">
                             
-                            <div style="display: flex; justify-content: space-around; gap: 20px;">
+                            <div style="display: flex; justify-content: space-around; gap: 20px; align-items: flex-start;">
                                 
-                                <div class="team-details blue-side" style="flex: 1; background: #1a2333; padding: 15px; border-radius: 8px; border-left: 5px solid #4a90e2; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                                <div class="team-details blue-side" style="flex: 1; background: #1a2333; padding: 15px; border-radius: 8px; border-left: 5px solid #4a90e2; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
                                     <div class="team-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #333;">
                                         <div style="display: flex; flex-direction: column; align-items: flex-start;">
                                             <span style="color: #4a90e2; font-weight: bold; font-size: 1.2em;">{{ game.Blue_Team_Name }}</span>
                                             <div class="toggle-btns" style="margin-top: 5px; display: flex; gap: 5px;">
-                                                <button onclick="toggleAssets(this, 'items')" style="background: #4a90e2; border: none; color: white; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">ITEMS</button>
-                                                <button onclick="toggleAssets(this, 'runes')" style="background: #333; border: 1px solid #4a90e2; color: #4a90e2; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">RUNES</button>
-                                                <button onclick="toggleAssets(this, 'stats')" style="background: #333; border: 1px solid #4a90e2; color: #4a90e2; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">STATS</button>
+                                                <button onclick="toggleAssets(this, 'items')" class="asset-btn active-blue">ITEMS</button>
+                                                <button onclick="toggleAssets(this, 'runes')" class="asset-btn">RUNES</button>
+                                                <button onclick="toggleAssets(this, 'stats')" class="asset-btn">STATS</button>
                                             </div>
                                         </div>
                                         <span style="background: #4a90e2; color: white; padding: 2px 10px; border-radius: 4px; font-size: 1.3em; font-weight: 800;">{{ game.details.blue_total_kills }}</span>
                                     </div>
                                     
-                                    {% for p in game.details.blue_players %}
-                                    <div class="player-detail-row" style="display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; gap: 10px;">
-                                        <div style="display: flex; align-items: center; width: 160px; flex-shrink: 0;">
-                                            <div style="width: 32px; height: 32px; flex-shrink: 0; margin-right: 10px;">{{ p.icon_html | safe }}</div>
-                                            <span style="font-size: 0.95em; color: #fff; font-weight: 500;">{{ p.name }}</span>
-                                        </div>
-
-                                        <div class="player-assets-wrapper" style="display: flex; gap: 3px; flex-grow: 1; justify-content: center; align-items: center;">
-                                            <div class="items-container" style="display: flex; gap: 3px;">
-                                                {% if p.items_list %}
-                                                    {% set items = p.items_list.split(',') if p.items_list is string else p.items_list %}
-                                                    {% for item_id in items %}
-                                                        {% if item_id|string != "0" and item_id|string != "" %}
-                                                            <img src="https://ddragon.leagueoflegends.com/cdn/16.1.1/img/item/{{ item_id }}.png" 
-                                                                width="22" height="22" style="border-radius: 3px; border: 1px solid #444;">
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                {% endif %}
-                                            </div>
-                                            
-                                            <div class="runes-container" style="display: none;">
-                                                {{ p.rune_html | safe }}
+                                    <div class="players-list">
+                                        {% for p in game.details.blue_players %}
+                                        <div class="player-detail-row" style="display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #2d333b; gap: 10px;">
+                                            <div style="display: flex; align-items: center; width: 130px; flex-shrink: 0;">
+                                                <div style="width: 24px; height: 24px; flex-shrink: 0; margin-right: 8px;">{{ p.icon_html | safe }}</div>
+                                                <span style="font-size: 0.8em; color: #fff;">{{ p.name }}</span>
                                             </div>
 
-                                            <div class="stats-container" style="display: none; flex-direction: column; gap: 4px; width: 100%; max-width: 160px; padding-left: 5px;">
-                                                
-                                                <div style="display: flex; align-items: center; gap: 8px;">
-                                                    <span style="font-size: 0.6em; color: #888; font-weight: bold; width: 30px; flex-shrink: 0;">DMG</span>
-                                                    <div style="flex-grow: 1; height: 8px; background: #111; border-radius: 4px; overflow: hidden; border: 1px solid #444; position: relative;">
-                                                        <div style="width: {{ (p.dmg / p.max_dmg * 100)|round }}%; height: 100%; background: linear-gradient(90deg, #4a90e2, #7eb6ff);"></div>
-                                                    </div>
-                                                    <span style="font-size: 0.7em; color: #fff; min-width: 35px; text-align: right;">{{ (p.dmg/1000)|round(1) }}k</span>
+                                            <div class="player-assets-wrapper" style="display: flex; gap: 3px; flex-grow: 1; justify-content: center;">
+                                                <div class="items-container asset-box">
+                                                    {% if p.items_list %}
+                                                        {% set items = p.items_list.split(',') if p.items_list is string else p.items_list %}
+                                                        {% for item_id in items %}
+                                                            {% if item_id|string != "0" and item_id|string != "" %}
+                                                                <img src="https://ddragon.leagueoflegends.com/cdn/16.1.1/img/item/{{ item_id }}.png" width="20" height="20" style="border-radius: 2px;">
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% endif %}
                                                 </div>
-
-                                                <div style="display: flex; align-items: center; gap: 8px;">
-                                                    <span style="font-size: 0.6em; color: #888; font-weight: bold; width: 30px; flex-shrink: 0;">GOLD</span>
-                                                    <div style="flex-grow: 1; height: 8px; background: #111; border-radius: 4px; overflow: hidden; border: 1px solid #444; position: relative;">
-                                                        <div style="width: {{ (p.gold / p.max_gold * 100)|round }}%; height: 100%; background: linear-gradient(90deg, #d4af37, #f9d71c);"></div>
+                                                <div class="runes-container asset-box" style="display: none;">{{ p.rune_html | safe }}</div>
+                                                <div class="stats-container asset-box" style="display: none; width: 100%; max-width: 100px;">
+                                                    <div style="height: 4px; background: #111; border-radius: 2px; overflow: hidden;">
+                                                        <div style="width: {{ (p.dmg / (p.max_dmg if p.max_dmg > 0 else 1) * 100)|round }}%; height: 100%; background: #4a90e2;"></div>
                                                     </div>
-                                                    <span style="font-size: 0.7em; color: #fff; min-width: 35px; text-align: right;">{{ (p.gold/1000)|round(1) }}k</span>
+                                                    <div style="font-size: 0.7em; color: #888; text-align: center;">{{ p.dmg }} dmg</div>
                                                 </div>
-
                                             </div>
+                                            <div style="width: 70px; text-align: right; font-family: monospace; font-size: 0.85em;">{{ p.k }}/{{ p.d }}/{{ p.a }}</div>
                                         </div>
-
-                                        <div style="width: 100px; text-align: right; font-family: 'Courier New', monospace; font-size: 1.15em; font-weight: 800; letter-spacing: 1px;">
-                                            {{ p.k }}/<span style="color: #ff4d4d;">{{ p.d }}</span>/{{ p.a }}
-                                        </div>
+                                        {% endfor %}
                                     </div>
-                                    {% endfor %}
+
+                                    <div class="events-label" style="margin-top: 15px; font-size: 0.75em; color: #4a90e2; font-weight: bold; text-transform: uppercase;">Team Events</div>
+                                    <div class="events-container event-list-scrollable" style="margin-top: 5px; height: 180px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 8px; border: 1px solid #2d333b;">
+                                        {% if game.details.blue_events %}
+                                            {% for event in game.details.blue_events %}
+                                            <div class="event-item" style="font-size: 0.75em; margin-bottom: 4px; border-bottom: 1px solid #222; color: #ccc;">
+                                                <span style="color: #888;">[{{ event.time }}]</span> <strong>{{ event.text }}</strong>
+                                            </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div style="color: #555; text-align: center; font-size: 0.8em; margin-top: 70px;">No events recorded</div>
+                                        {% endif %}
+                                    </div>
                                 </div>
 
-                                <div class="team-details red-side" style="flex: 1; background: #331a1a; padding: 15px; border-radius: 8px; border-right: 5px solid #e24a4a; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                                <div class="replay-main-container" style="flex: 0 0 420px; background: #1a1a1a; padding: 15px; border-radius: 10px; align-self: stretch; display: flex; flex-direction: column; justify-content: center;">
+                                    <div class="map-container" id="map-{{ game.Game_ID }}" style="position: relative; width: 400px; height: 400px; background: url('/static/images/minimap.png') no-repeat center; background-size: contain; border: 2px solid #444; overflow: hidden; border-radius: 4px;"></div>
+                                    <div class="player-controls" style="margin-top: 15px; text-align: center;">
+                                        <input type="range" id="slider-{{ game.Game_ID }}" style="width: 100%;" min="0" value="0" step="1" oninput="seekGame('{{ game.Game_ID }}', this.value)">
+                                        <div style="display: flex; justify-content: space-between; color: #ccc; font-size: 0.8em; margin: 5px 0; font-family: monospace;">
+                                            <span id="time-current-{{ game.Game_ID }}">00:00</span>
+                                            <span id="time-total-{{ game.Game_ID }}">00:00</span>
+                                        </div>
+                                        <button 
+                                            id="play-btn-{{ game.Game_ID }}" 
+                                            class="play-btn" 
+                                            onclick="togglePlay(this)" 
+                                            style="width: 140px; padding: 8px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                            Play
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="team-details red-side" style="flex: 1; background: #331a1a; padding: 15px; border-radius: 8px; border-right: 5px solid #e24a4a; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
                                     <div class="team-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #333;">
                                         <span style="background: #e24a4a; color: white; padding: 2px 10px; border-radius: 4px; font-size: 1.3em; font-weight: 800;">{{ game.details.red_total_kills }}</span>
                                         <div style="display: flex; flex-direction: column; align-items: flex-end;">
                                             <span style="color: #e24a4a; font-weight: bold; font-size: 1.2em;">{{ game.Red_Team_Name }}</span>
                                             <div class="toggle-btns" style="margin-top: 5px; display: flex; gap: 5px;">
-                                                <button onclick="toggleAssets(this, 'items')" style="background: #e24a4a; border: none; color: white; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">ITEMS</button>
-                                                <button onclick="toggleAssets(this, 'runes')" style="background: #333; border: 1px solid #e24a4a; color: #e24a4a; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">RUNES</button>
-                                                <button onclick="toggleAssets(this, 'stats')" style="background: #333; border: 1px solid #e24a4a; color: #e24a4a; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px;">STATS</button>
+                                                <button onclick="toggleAssets(this, 'items')" class="asset-btn active-red">ITEMS</button>
+                                                <button onclick="toggleAssets(this, 'runes')" class="asset-btn">RUNES</button>
+                                                <button onclick="toggleAssets(this, 'stats')" class="asset-btn">STATS</button>
                                             </div>
                                         </div>
                                     </div>
-
-                                    {% for p in game.details.red_players %}
-                                    <div class="player-detail-row" style="display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; gap: 10px;">
-                                        <div style="display: flex; align-items: center; width: 160px; flex-shrink: 0;">
-                                            <div style="width: 32px; height: 32px; flex-shrink: 0; margin-right: 10px;">{{ p.icon_html | safe }}</div>
-                                            <span style="font-size: 0.95em; color: #fff; font-weight: 500;">{{ p.name }}</span>
-                                        </div>
-
-                                        <div class="player-assets-wrapper" style="display: flex; gap: 3px; flex-grow: 1; justify-content: center; align-items: center;">
-                                            <div class="items-container" style="display: flex; gap: 3px;">
-                                                {% if p.items_list %}
-                                                    {% set items = p.items_list.split(',') if p.items_list is string else p.items_list %}
-                                                    {% for item_id in items %}
-                                                        {% if item_id|string != "0" and item_id|string != "" %}
-                                                            <img src="https://ddragon.leagueoflegends.com/cdn/16.1.1/img/item/{{ item_id }}.png" 
-                                                                width="22" height="22" style="border-radius: 3px; border: 1px solid #444;">
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                {% endif %}
+                                    
+                                    <div class="players-list">
+                                        {% for p in game.details.red_players %}
+                                        <div class="player-detail-row" style="display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #3d2a2a; gap: 10px;">
+                                            <div style="display: flex; align-items: center; width: 130px; flex-shrink: 0;">
+                                                <div style="width: 24px; height: 24px; flex-shrink: 0; margin-right: 8px;">{{ p.icon_html | safe }}</div>
+                                                <span style="font-size: 0.8em; color: #fff;">{{ p.name }}</span>
                                             </div>
-
-                                            <div class="runes-container" style="display: none;">
-                                                {{ p.rune_html | safe }}
-                                            </div>
-
-                                            <div class="stats-container" style="display: none; flex-direction: column; gap: 4px; width: 100%; max-width: 160px;">
-                                                <div style="display: flex; align-items: center; gap: 8px;">
-                                                    <span style="font-size: 0.6em; color: #888; font-weight: bold; width: 32px; flex-shrink: 0; text-align: left;">DMG</span>
-                                                    <div style="flex-grow: 1; height: 8px; background: #111; border-radius: 4px; overflow: hidden; border: 1px solid #444; position: relative;">
-                                                        <div style="width: {{ (p.dmg / p.max_dmg * 100)|round }}%; height: 100%; background: linear-gradient(90deg, #e24a4a, #ff8080);"></div>
-                                                    </div>
-                                                    <span style="font-size: 0.7em; color: #fff; min-width: 35px; text-align: right;">{{ (p.dmg/1000)|round(1) }}k</span>
+                                            <div class="player-assets-wrapper" style="display: flex; gap: 3px; flex-grow: 1; justify-content: center;">
+                                                <div class="items-container asset-box">
+                                                    {% if p.items_list %}
+                                                        {% set items = p.items_list.split(',') if p.items_list is string else p.items_list %}
+                                                        {% for item_id in items %}
+                                                            {% if item_id|string != "0" and item_id|string != "" %}
+                                                                <img src="https://ddragon.leagueoflegends.com/cdn/16.1.1/img/item/{{ item_id }}.png" width="20" height="20" style="border-radius: 2px;">
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% endif %}
                                                 </div>
-
-                                                <div style="display: flex; align-items: center; gap: 8px;">
-                                                    <span style="font-size: 0.6em; color: #888; font-weight: bold; width: 32px; flex-shrink: 0; text-align: left;">GOLD</span>
-                                                    <div style="flex-grow: 1; height: 8px; background: #111; border-radius: 4px; overflow: hidden; border: 1px solid #444; position: relative;">
-                                                        <div style="width: {{ (p.gold / p.max_gold * 100)|round }}%; height: 100%; background: linear-gradient(90deg, #d4af37, #f9d71c);"></div>
+                                                <div class="runes-container asset-box" style="display: none;">{{ p.rune_html | safe }}</div>
+                                                <div class="stats-container asset-box" style="display: none; width: 100%; max-width: 100px;">
+                                                    <div style="height: 4px; background: #111; border-radius: 2px; overflow: hidden;">
+                                                        <div style="width: {{ (p.dmg / (p.max_dmg if p.max_dmg > 0 else 1) * 100)|round }}%; height: 100%; background: #e24a4a;"></div>
                                                     </div>
-                                                    <span style="font-size: 0.7em; color: #fff; min-width: 35px; text-align: right;">{{ (p.gold/1000)|round(1) }}k</span>
+                                                    <div style="font-size: 0.7em; color: #888; text-align: center;">{{ p.dmg }} dmg</div>
                                                 </div>
                                             </div>
+                                            <div style="width: 70px; text-align: right; font-family: monospace; font-size: 0.85em;">{{ p.k }}/{{ p.d }}/{{ p.a }}</div>
                                         </div>
-
-                                        <div style="width: 100px; text-align: right; font-family: 'Courier New', monospace; font-size: 1.15em; font-weight: 800; letter-spacing: 1px;">
-                                            {{ p.k }}/<span style="color: #ff4d4d;">{{ p.d }}</span>/{{ p.a }}
-                                        </div>
+                                        {% endfor %}
                                     </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
 
-                            <div style="text-align: center; margin-top: 10px;">
-                                <div class="col-result result-{{ game['Result'] | lower }}" style="display: inline-block; padding: 8px 25px; border-radius: 6px; font-weight: bold; font-size: 1.1em; text-transform: uppercase; letter-spacing: 1px;">
-                                    {{ game['Result'] }}
+                                    <div class="events-label" style="margin-top: 15px; font-size: 0.75em; color: #e24a4a; font-weight: bold; text-transform: uppercase; text-align: right;">Team Events</div>
+                                    <div class="events-container event-list-scrollable" style="margin-top: 5px; height: 180px; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 4px; padding: 8px; border: 1px solid #3d2a2a;">
+                                        {% if game.details.red_events %}
+                                            {% for event in game.details.red_events %}
+                                            <div class="event-item" style="font-size: 0.75em; margin-bottom: 4px; border-bottom: 1px solid #222; color: #ccc;">
+                                                <span style="color: #888;">[{{ event.time }}]</span> <strong>{{ event.text }}</strong>
+                                            </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div style="color: #555; text-align: center; font-size: 0.8em; margin-top: 70px;">No events recorded</div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </td>
                 </tr>
+
+                <style>
+                    .asset-btn { background: #333; border: 1px solid #555; color: #888; border-radius: 3px; cursor: pointer; font-size: 0.7em; padding: 2px 6px; }
+                    .active-blue { background: #4a90e2 !important; color: white !important; border-color: #4a90e2 !important; }
+                    .active-red { background: #e24a4a !important; color: white !important; border-color: #e24a4a !important; }
+                </style>
                 {% endfor %}
             </tbody>
         </table>
@@ -395,83 +402,303 @@
         <p class="notice">No game history available for this period.</p>
     {% endif %}
     {# --- НОВЫЙ Блок JavaScript для сортировки и переключения деталей --- #}
-    <script>
+  <script>
+        // Глобальный объект для хранения данных загруженных матчей
+        const loadedReplays = {};
+
         // Функция для переключения видимости деталей
-        function toggleDetails(rowId) {
+        async function toggleDetails(rowId) {
             const row = document.getElementById(rowId);
             const btn = row.previousElementSibling.querySelector('.btn-details');
+            
+            // Пытаемся достать ID из rowId (например, из 'details-9f67...')
+            const gameId = rowId.replace('details-', '');
+            
+            console.log("Opening details for Game ID:", gameId); // Проверь это в консоли!
+
             if (row.style.display === 'none') {
                 row.style.display = 'table-row';
-                btn.textContent = 'Hide';
+                if (btn) btn.textContent = 'Hide';
+                
+                // Загружаем данные, если их еще нет
+                if (!loadedReplays[gameId]) {
+                    await loadReplayData(gameId);
+                }
             } else {
                 row.style.display = 'none';
-                btn.textContent = 'Show';
+                if (btn) btn.textContent = 'Show';
+                
+                // Останавливаем плеер при закрытии
+                if (loadedReplays[gameId]) {
+                    loadedReplays[gameId].isPlaying = false;
+                    clearInterval(loadedReplays[gameId].intervalId);
+                    const playBtn = document.getElementById(`play-btn-${gameId}`);
+                    if (playBtn) playBtn.textContent = 'Play';
+                }
             }
         }
-        // НОВАЯ функция для переключения Итемов/Рун
-        function toggleAssets(btn, type) {
-            const teamDetails = btn.closest('.team-details');
-            const items = teamDetails.querySelectorAll('.items-container');
-            const runes = teamDetails.querySelectorAll('.runes-container');
-            const stats = teamDetails.querySelectorAll('.stats-container'); 
-            const allBtns = btn.parentElement.querySelectorAll('button');
+        function seekGame(gameId, value) {
+            const game = loadedReplays[gameId];
+            if (game) {
+                game.currentTime = parseInt(value);
+                // Обновляем текст времени сразу при перетаскивании
+                const timeDisplay = document.getElementById(`time-current-${gameId}`);
+                if (timeDisplay) {
+                    const mins = Math.floor(game.currentTime / 60000);
+                    const secs = Math.floor((game.currentTime % 60000) / 1000);
+                    timeDisplay.textContent = mins.toString().padStart(2, '0') + ":" + secs.toString().padStart(2, '0');
+                }
+                renderReplayFrame(gameId, game.currentTime);
+            }
+        }
+        // Загрузка данных таймлайна с сервера
+        async function loadReplayData(gameId) {
+            if (!gameId) return;
             
-            // Цвет активной кнопки
-            const isBlue = teamDetails.classList.contains('blue-side');
-            const activeColor = isBlue ? '#4a90e2' : '#e24a4a';
+            try {
+                const response = await fetch(`/get_match_replay/${gameId}`);
+                const data = await response.json();
 
-            // 1. Сброс всех кнопок в блоке
-            allBtns.forEach(b => {
-                b.style.background = '#333';
-                b.style.color = activeColor;
-                b.style.border = `1px solid ${activeColor}`;
+                if (data.error) return;
+
+                loadedReplays[gameId] = {
+                    timeline: data.timeline || [],
+                    events: data.events || [],
+                    isPlaying: false,
+                    currentTime: 0,
+                    maxTime: (data.timeline && data.timeline.length > 0) ? data.timeline[data.timeline.length - 1].timestamp : 0,
+                    intervalId: null
+                };
+
+                // Заполняем списки событий
+                fillEventLists(gameId, data.events);
+
+                // Настройка слайдера
+                const slider = document.getElementById(`slider-${gameId}`);
+                if (slider) slider.max = loadedReplays[gameId].maxTime;
+
+                // Настройка общего времени
+                const totalMs = loadedReplays[gameId].maxTime;
+                const totalTimeElem = document.getElementById(`time-total-${gameId}`);
+                if (totalTimeElem) {
+                    const mins = Math.floor(totalMs / 60000);
+                    const secs = Math.floor((totalMs % 60000) / 1000);
+                    totalTimeElem.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                }
+
+                renderReplayFrame(gameId, 0);
+
+            } catch (err) {
+                console.error("Load error:", err);
+            }
+        }
+        // Новая функция для создания списка кликабельных событий
+        function fillEventLists(gameId, events) {
+            const blueList = document.getElementById(`events-blue-${gameId}`);
+            const redList = document.getElementById(`events-red-${gameId}`);
+            if (!blueList || !redList) return;
+
+            blueList.innerHTML = '';
+            redList.innerHTML = '';
+
+            events.forEach(event => {
+                const div = document.createElement('div');
+                div.className = 'event-item';
+                
+                // Форматируем время MM:SS (из миллисекунд)
+                const mins = Math.floor(event.timestamp / 60000);
+                const secs = Math.floor((event.timestamp % 60000) / 1000);
+                const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+                
+                let icon = "⚔️"; 
+                if (event.type.includes('BUILDING')) icon = "🏰";
+                if (event.type.includes('ELITE_MONSTER')) icon = "🐲";
+
+                // Используем event.text, который мы сформировали в Python с именем игрока
+                div.innerHTML = `<span style="color:#ffd700; font-family:monospace;">[${timeStr}]</span> 
+                                <span style="margin-left:5px;">${icon} ${event.text || event.message}</span>`;
+                
+                div.style.cssText = "padding: 5px; border-bottom: 1px solid #222; cursor: pointer; color: #eee; font-size: 0.85em;";
+                
+                div.onclick = () => {
+                    seekGame(gameId, event.timestamp);
+                    // Если игра стояла на паузе, она обновит кадр. Если играла - продолжит с этого места.
+                };
+
+                div.onmouseover = () => div.style.background = "#222";
+                div.onmouseout = () => div.style.background = "transparent";
+
+                if (event.teamId === 100) blueList.appendChild(div);
+                else redList.appendChild(div);
+            });
+        }
+        let animationId = null;
+        let lastTimestamp = 0;
+
+        function animate(timestamp, gameId) {
+            const game = loadedReplays[gameId];
+            if (!game || !game.isPlaying) return;
+
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const delta = (timestamp - lastTimestamp) * (game.speed || 1);
+            lastTimestamp = timestamp;
+
+            game.currentTime += delta;
+            
+            // Ограничение по макс времени
+            if (game.currentTime > game.maxTime) {
+                game.currentTime = 0; // или пауза
+            }
+
+            const slider = document.getElementById(`slider-${gameId}`);
+            if (slider) slider.value = game.currentTime;
+
+            renderReplayFrame(gameId, game.currentTime);
+            
+            animationId = requestAnimationFrame((t) => animate(t, gameId));
+        }
+
+        function togglePlay(element) {
+            const gameId = element.id.replace('play-btn-', '');
+            const game = loadedReplays[gameId];
+            if (!game) return;
+
+            game.isPlaying = !game.isPlaying;
+
+            if (game.isPlaying) {
+                element.textContent = 'Pause';
+                lastTimestamp = 0;
+                animationId = requestAnimationFrame((t) => animate(t, gameId));
+            } else {
+                element.textContent = 'Play';
+                if (animationId) cancelAnimationFrame(animationId);
+            }
+        }
+
+        function renderReplayFrame(gameId, timeMs) {
+            const game = loadedReplays[gameId];
+            if (!game || !game.timeline) return;
+
+            // 1. Находим два кадра для интерполяции
+            let currentFrame = null;
+            let nextFrame = null;
+
+            for (let i = 0; i < game.timeline.length; i++) {
+                if (game.timeline[i].timestamp <= timeMs) {
+                    currentFrame = game.timeline[i];
+                } else {
+                    nextFrame = game.timeline[i];
+                    break;
+                }
+            }
+
+            if (!currentFrame) return;
+
+            const mapContainer = document.getElementById(`map-${gameId}`);
+            const maxCoord = 15000;
+
+            currentFrame.positions.forEach(p1 => {
+                let icon = document.getElementById(`icon-${gameId}-${p1.championName}`);
+                
+                if (!icon) {
+                    // Создание иконки (оставляем как было)
+                    icon = document.createElement('img');
+                    icon.id = `icon-${gameId}-${p1.championName}`;
+                    icon.src = `https://ddragon.leagueoflegends.com/cdn/16.1.1/img/champion/${p1.championName}.png`;
+                    icon.style.cssText = `
+                        position: absolute; width: 26px; height: 26px; border-radius: 50%; z-index: 10;
+                        border: 2px solid ${p1.teamId === 100 ? '#4a90e2' : '#e24a4a'};
+                        background: #000; transform: translate(-50%, -50%);
+                        transition: left 0.1s linear, top 0.1s linear; /* Маленький транзишн для сглаживания */
+                    `;
+                    mapContainer.appendChild(icon);
+                }
+
+                let posX = p1.x;
+                let posZ = p1.z;
+
+                // 2. ВЫЧИСЛЯЕМ ПРОМЕЖУТОЧНУЮ ПОЗИЦИЮ (Магия плавности)
+                if (nextFrame) {
+                    const p2 = nextFrame.positions.find(p => p.championName === p1.championName);
+                    if (p2) {
+                        // Вычисляем коэффициент t (от 0 до 1)
+                        const t = (timeMs - currentFrame.timestamp) / (nextFrame.timestamp - currentFrame.timestamp);
+                        // Линейная интерполяция координат
+                        posX = p1.x + (p2.x - p1.x) * t;
+                        posZ = p1.z + (p2.z - p1.z) * t;
+                    }
+                }
+
+                const left = (posX / maxCoord) * 100;
+                const top = (1 - (posZ / maxCoord)) * 100;
+
+                icon.style.left = left + '%';
+                icon.style.top = top + '%';
             });
 
-            // 2. Подсветка нажатой кнопки
-            btn.style.background = activeColor;
-            btn.style.color = 'white';
-            btn.style.border = '1px solid transparent'; 
-
-            // 3. Переключение видимости (Скрываем всё, включаем только нужное)
-            if (type === 'items') {
-                items.forEach(el => el.style.setProperty('display', 'flex', 'important'));
-                runes.forEach(el => el.style.setProperty('display', 'none', 'important'));
-                stats.forEach(el => el.style.setProperty('display', 'none', 'important'));
-            } else if (type === 'runes') {
-                items.forEach(el => el.style.setProperty('display', 'none', 'important'));
-                runes.forEach(el => el.style.setProperty('display', 'flex', 'important'));
-                stats.forEach(el => el.style.setProperty('display', 'none', 'important'));
-            } else if (type === 'stats') {
-                items.forEach(el => el.style.setProperty('display', 'none', 'important'));
-                runes.forEach(el => el.style.setProperty('display', 'none', 'important'));
-                stats.forEach(el => el.style.setProperty('display', 'flex', 'important'));
+            // Обновляем таймер
+            const timeDisplay = document.getElementById(`time-current-${gameId}`);
+            if (timeDisplay) {
+                const mins = Math.floor(timeMs / 60000);
+                const secs = Math.floor((timeMs % 60000) / 1000);
+                timeDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             }
         }
+
+        // --- Твои существующие функции ---
+        function toggleAssets(btn, type) {
+            const teamBlock = btn.closest('.team-details');
+            const playerList = teamBlock.querySelector('.players-list');
+            const eventBox = teamBlock.querySelector('.events-container');
+            
+            // 1. Ивенты теперь ВСЕГДА видны, мы их не трогаем (удаляем строки скрытия)
+            // playerList.style.display = 'block'; // Всегда блок
+            // eventBox.style.display = 'block';   // Всегда блок
+
+            // 2. Скрываем только контейнеры внутри строк игроков
+            teamBlock.querySelectorAll('.items-container, .runes-container, .stats-container').forEach(el => {
+                el.style.display = 'none';
+            });
+
+            // 3. Показываем нужный тип
+            if (type === 'items') {
+                teamBlock.querySelectorAll('.items-container').forEach(el => el.style.display = 'flex');
+            } else if (type === 'runes') {
+                teamBlock.querySelectorAll('.runes-container').forEach(el => el.style.display = 'block');
+            } else if (type === 'stats') {
+                teamBlock.querySelectorAll('.stats-container').forEach(el => el.style.display = 'flex');
+            }
+            
+            // 4. Подсветка кнопок
+            const buttons = teamBlock.querySelectorAll('.toggle-btns button');
+            buttons.forEach(b => {
+                b.style.background = '#333';
+                b.style.color = b.style.borderColor; 
+            });
+            btn.style.background = btn.style.borderColor;
+            btn.style.color = 'white';
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const sortableTables = document.querySelectorAll('.sortable-table');
-
             sortableTables.forEach(table => {
                 const headers = table.querySelectorAll('th.sortable-header');
                 headers.forEach(header => {
                     header.addEventListener('click', () => {
                         const tableBody = table.querySelector('tbody');
                         const columnIndex = parseInt(header.dataset.sortCol);
-                        const sortType = header.dataset.sortType || 'string'; // 'number' or 'string'
+                        const sortType = header.dataset.sortType || 'string';
                         const currentIsAscending = header.classList.contains('asc');
-                        const direction = currentIsAscending ? -1 : 1; // -1 for desc, 1 for asc
+                        const direction = currentIsAscending ? -1 : 1;
 
-                        // Remove sorting classes from other headers
                         headers.forEach(h => h.classList.remove('asc', 'desc'));
-                        // Add appropriate class to current header
                         header.classList.toggle('asc', !currentIsAscending);
                         header.classList.toggle('desc', currentIsAscending);
 
-                        // Sort rows
                         Array.from(tableBody.querySelectorAll('tr'))
                             .sort((rowA, rowB) => {
                                 const cellA = rowA.querySelector(`td:nth-child(${columnIndex + 1})`);
                                 const cellB = rowB.querySelector(`td:nth-child(${columnIndex + 1})`);
-
                                 let valueA = cellA.dataset.sortValue || cellA.textContent.trim();
                                 let valueB = cellB.dataset.sortValue || cellB.textContent.trim();
 
@@ -487,7 +714,7 @@
                                 if (valueA > valueB) return 1 * direction;
                                 return 0;
                             })
-                            .forEach(sortedRow => tableBody.appendChild(sortedRow)); // Append rows in sorted order
+                            .forEach(sortedRow => tableBody.appendChild(sortedRow));
                     });
                 });
             });
