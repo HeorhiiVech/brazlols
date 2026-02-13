@@ -15,24 +15,20 @@ import math # Для округления
 # --- КОНСТАНТЫ (HLL) ---
 GRID_API_KEY = os.getenv("GRID_API_KEY")
 GRID_BASE_URL = "https://api.grid.gg/"
-TEAM_NAME = "paiN Gaming" # HLL Team Name
-PLAYER_IDS = {"24422": "Robo", "23038": "PAIN CarioK", "23755": "PAIN tinowns", "25075": "PAIN TitaN", "23553": "PAIN Kuri"} # HLL Roster
-ROSTER_RIOT_NAME_TO_GRID_ID = {"Robo": "24422", "PAIN CarioK": "23038", "PAIN tinowns": "23755", "PAIN TitaN": "25075", "PAIN Kuri": "23553"} # HLL Roster
-PLAYER_ROLES_BY_ID = {"24422": "TOP", "23038": "JUNGLE", "23755": "MIDDLE", "25075": "BOTTOM", "23553": "UTILITY"} # HLL Roles
+TEAM_NAME = "Bushido Wildcats" # HLL Team Name
+PLAYER_IDS = {"22193": "BW StarScreen", "23093": "BW Elramir", "21143": "BW aliX", "20958": "BW Kenal", "20510": "BW Lekcyc"} # HLL Roster
+ROSTER_RIOT_NAME_TO_GRID_ID = {"BW StarScreen": "22193", "BW Elramir": "23093", "BW aliX": "21143", "BW Kenal": "20958", "BW Lekcyc": "20510"} # HLL Roster
+PLAYER_ROLES_BY_ID = {"22193": "TOP", "23093": "JUNGLE", "21143": "MIDDLE", "20958": "BOTTOM", "20510": "UTILITY"} # HLL Roles
 API_REQUEST_DELAY = 0.5 # HLL Delay
 ROLE_ORDER_FOR_SHEET = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"]
 PLAYER_NAME_MAP = {
-    "PAIN Extra 01": "PAIN tinowns",
-    "PAIN tinowns": "PAIN tinowns",
-    "PAIN Robo": "Robo", 
-    "PAIN Robo": "PAIN Robo",
-    "PAIN CarioK": "PAIN CarioK",
-    "PAIN TitaN": "PAIN TitaN",
-    "PAIN Extra 09": "PAIN Marvin",
-    "PAIN Marvin":"PAIN Marvin",
-    "PAIN Kuri": "PAIN Kuri"
+"BW StarScreen":"BW StarScreen",
+"BW Elramir":"BW Elramir",
+"BW aliX":"BW aliX",
+"BW Kenal":"BW Kenal",
+"BW Lekcyc":"BW Lekcyc"
 }
-PLAYER_DISPLAY_ORDER = ["PAIN Robo", "PAIN CarioK", "PAIN tinowns", "PAIN Marvin", "PAIN Kuri"]
+PLAYER_DISPLAY_ORDER = ["BW StarScreen", "BW Elramir", "BW aliX", "BW Kenal", "BW Lekcyc"]
 
 # --- Логирование ---
 def log_message(message):
@@ -124,7 +120,7 @@ def get_rest_request(endpoint, retries=5, initial_delay=2, expected_type='json')
     log_message(f"REST GET failed after {retries} attempts for {endpoint}. Last error: {last_exception}")
     return None
 
-def get_all_series(days_ago=5):
+def get_all_series(days_ago=20):
     """ Получает список ID и дат начала LoL скримов за последние N дней """
     query_string = """
         query ($filter: SeriesFilter, $first: Int, $after: Cursor, $orderBy: SeriesOrderBy, $orderDirection: OrderDirection) {
@@ -223,7 +219,7 @@ def extract_team_tag(riot_id_game_name):
 # --- Функция обновления и сохранения данных скримов в SQLite (Без изменений от HLL) ---
 def fetch_and_store_scrims():
     log_message("Starting scrims update process...")
-    series_list = get_all_series(days_ago=5)
+    series_list = get_all_series(days_ago=20)
     if not series_list: 
         log_message("No recent series found.")
         return 0
@@ -661,8 +657,8 @@ def aggregate_scrim_data(time_filter="All Time", side_filter="all"):
             game_id = str(game.get("Game_ID") or game.get("Game ID") or "N/A")
             result = game.get("Result", "Unknown")
             
-            is_our_blue = game.get("Blue_Team_Name") == "paiN Gaming"
-            is_our_red = game.get("Red_Team_Name") == "paiN Gaming"
+            is_our_blue = game.get("Blue_Team_Name") == "Bushido Wildcats"
+            is_our_red = game.get("Red_Team_Name") == "Bushido Wildcats"
             
             if is_our_blue:
                 if result == "Win": overall_stats["blue_wins"] += 1
